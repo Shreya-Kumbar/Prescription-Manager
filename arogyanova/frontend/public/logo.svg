@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Background circle with gradient feel -->
+  <circle cx="24" cy="24" r="22" fill="#0F9F91" opacity="0.12"/>
+  <!-- Outer ring -->
+  <circle cx="24" cy="24" r="20" stroke="#0F9F91" stroke-width="1.5" fill="none"/>
+  
+  <!-- Stylized leaf / nova spark — bottom left -->
+  <path d="M14 32 Q10 24 16 18 Q22 14 24 20" stroke="#6BA8E5" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Cross — minimal, centered -->
+  <rect x="22" y="14" width="4" height="20" rx="2" fill="#0F9F91"/>
+  <rect x="14" y="22" width="20" height="4" rx="2" fill="#0F9F91"/>
+  
+  <!-- Nova spark dots -->
+  <circle cx="36" cy="14" r="2" fill="#0F9F91" opacity="0.7"/>
+  <circle cx="38" cy="20" r="1.5" fill="#0F9F91" opacity="0.5"/>
+  <circle cx="34" cy="10" r="1" fill="#0F9F91" opacity="0.4"/>
+</svg>
