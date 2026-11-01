@@ -1,17 +1,25 @@
 """
 Database engine, session factory, and base model configuration.
+Supports both PostgreSQL (production/docker) and SQLite+aiosqlite (local dev/testing).
 """
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
 
+is_sqlite = "sqlite" in settings.DATABASE_URL
+engine_kwargs = {"echo": False}  # keep logs clean
+
+if not is_sqlite:
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_pre_ping": True,
+    })
+
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
+    **engine_kwargs,
 )
 
 AsyncSessionLocal = async_sessionmaker(

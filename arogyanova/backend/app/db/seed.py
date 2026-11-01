@@ -40,7 +40,7 @@ MEDICATIONS = [
 
 
 async def seed() -> None:
-    print("🌱 Starting ArogyaNova seed...")
+    print("* Starting ArogyaNova seed...")
 
     async with AsyncSessionLocal() as db:
         # Create medications
@@ -275,8 +275,8 @@ async def seed() -> None:
         ))
 
         await db.commit()
-        print("✅ Seed complete!")
-        print("\n📋 Demo Accounts:")
+        print("* Seed complete!")
+        print("\n* Demo Accounts:")
         print("  admin@arogyanova.dev       | Demo@Admin123     | Administrator")
         print("  dr.sharma@arogyanova.dev   | Demo@Doctor123    | Doctor")
         print("  dr.patel@arogyanova.dev    | Demo@Doctor123    | Doctor")

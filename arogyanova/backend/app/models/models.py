@@ -10,9 +10,9 @@ from typing import List, Optional
 
 from sqlalchemy import (
     Boolean, CheckConstraint, Column, Date, DateTime,
-    Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
+    Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -28,7 +28,7 @@ class UserModel(Base):
     """
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -84,8 +84,8 @@ class UserModel(Base):
 class DoctorProfileModel(Base):
     __tablename__ = "doctor_profiles"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     license_number: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     specialization: Mapped[Optional[str]] = mapped_column(String(200))
     hospital_affiliation: Mapped[Optional[str]] = mapped_column(String(200))
@@ -97,8 +97,8 @@ class DoctorProfileModel(Base):
 class PatientProfileModel(Base):
     __tablename__ = "patient_profiles"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     date_of_birth: Mapped[Optional[date]] = mapped_column(Date)
     phone: Mapped[Optional[str]] = mapped_column(String(20))
     address: Mapped[Optional[str]] = mapped_column(Text)
@@ -113,8 +113,8 @@ class PatientProfileModel(Base):
 class PharmacistProfileModel(Base):
     __tablename__ = "pharmacist_profiles"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     license_number: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     pharmacy_name: Mapped[Optional[str]] = mapped_column(String(200))
     phone: Mapped[Optional[str]] = mapped_column(String(20))
@@ -125,7 +125,7 @@ class PharmacistProfileModel(Base):
 class MedicationModel(Base):
     __tablename__ = "medications"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     generic_name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     brand_name: Mapped[Optional[str]] = mapped_column(String(200))
     strength: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -150,9 +150,9 @@ class MedicationModel(Base):
 class PrescriptionModel(Base):
     __tablename__ = "prescriptions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    doctor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    doctor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False, index=True)
     issue_date: Mapped[date] = mapped_column(Date, nullable=False)
     follow_up_date: Mapped[Optional[date]] = mapped_column(Date)
@@ -180,12 +180,12 @@ class PrescriptionModel(Base):
 class PrescriptionItemModel(Base):
     __tablename__ = "prescription_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     prescription_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("prescriptions.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("prescriptions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     medication_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("medications.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("medications.id"), nullable=False
     )
     strength: Mapped[str] = mapped_column(String(100), nullable=False)
     dosage: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -204,10 +204,10 @@ class PrescriptionItemModel(Base):
 class MedicationScheduleModel(Base):
     __tablename__ = "medication_schedules"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     prescription_item_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("prescription_items.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("prescription_items.id", ondelete="CASCADE"), nullable=False
     )
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     medication_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -226,11 +226,11 @@ class MedicationScheduleModel(Base):
 class MedicationLogModel(Base):
     __tablename__ = "medication_logs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     schedule_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("medication_schedules.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("medication_schedules.id", ondelete="CASCADE"), nullable=False
     )
-    patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     action: Mapped[str] = mapped_column(String(50), nullable=False)  # "taken" | "skipped"
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     notes: Mapped[Optional[str]] = mapped_column(Text)
@@ -246,8 +246,8 @@ class MedicationLogModel(Base):
 class NotificationModel(Base):
     __tablename__ = "notifications"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     priority: Mapped[str] = mapped_column(String(50), default="normal")
@@ -265,8 +265,8 @@ class NotificationModel(Base):
 class AuditLogModel(Base):
     __tablename__ = "audit_logs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     resource_type: Mapped[str] = mapped_column(String(100), nullable=False)
     resource_id: Mapped[Optional[str]] = mapped_column(String(200))
@@ -280,8 +280,8 @@ class AuditLogModel(Base):
 class RefreshTokenModel(Base):
     __tablename__ = "refresh_tokens"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

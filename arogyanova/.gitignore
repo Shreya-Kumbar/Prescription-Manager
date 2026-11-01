@@ -2,8 +2,8 @@
 
 # Environment files
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -17,6 +17,9 @@ dist/
 .venv/
 venv/
 env/
+*.db
+*.sqlite
+*.sqlite3
 
 # Node
 node_modules/
