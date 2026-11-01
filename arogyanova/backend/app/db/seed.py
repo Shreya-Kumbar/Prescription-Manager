@@ -1,6 +1,7 @@
 """
 ArogyaNova — Database Seed Script
 Creates demo accounts and sample data for development.
+Idempotent: safe to call multiple times — skips if data already exists.
 
 Run with: python -m app.db.seed
 """
@@ -10,6 +11,7 @@ import asyncio
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import AsyncSessionLocal, engine
@@ -40,6 +42,17 @@ MEDICATIONS = [
 
 
 async def seed() -> None:
+    """Idempotent seed — skips if users already exist in the database."""
+
+    # --- Idempotency check ---
+    async with AsyncSessionLocal() as check_db:
+        count = (
+            await check_db.execute(select(func.count()).select_from(UserModel))
+        ).scalar_one()
+        if count > 0:
+            print("* Database already seeded — skipping.")
+            return
+
     print("* Starting ArogyaNova seed...")
 
     async with AsyncSessionLocal() as db:
@@ -163,7 +176,7 @@ async def seed() -> None:
             issue_date=today - timedelta(days=7),
             follow_up_date=today + timedelta(days=21),
             diagnosis="Acute upper respiratory tract infection",
-            clinical_notes="Patient presents with sore throat, mild fever (38.2°C). No known drug allergies except penicillin. Prescribed amoxicillin with caution — monitor for reaction.",
+            clinical_notes="Patient presents with sore throat, mild fever (38.2 C). No known drug allergies except penicillin. Prescribed amoxicillin with caution.",
         ))
         item1a_id = uuid.uuid4()
         item1b_id = uuid.uuid4()
@@ -186,7 +199,7 @@ async def seed() -> None:
             prescription_id=pres1_id,
             medication_id=med_ids["Paracetamol"],
             strength="500mg",
-            dosage="1–2 tablets",
+            dosage="1-2 tablets",
             route="oral",
             frequency="As needed for fever/pain (max 4 times daily)",
             duration_days=7,
@@ -216,7 +229,7 @@ async def seed() -> None:
             doctor_id=dr_patel_id,
             status="draft",
             issue_date=today,
-            diagnosis="Hypertension — Stage 1",
+            diagnosis="Hypertension Stage 1",
             clinical_notes="BP 145/92 mmHg on two readings. Started on low-dose antihypertensive.",
         ))
         db.add(PrescriptionItemModel(
@@ -241,7 +254,7 @@ async def seed() -> None:
             doctor_id=dr_sharma_id,
             status="completed",
             issue_date=today - timedelta(days=45),
-            diagnosis="Type 2 Diabetes Mellitus — initial management",
+            diagnosis="Type 2 Diabetes Mellitus initial management",
         ))
         db.add(PrescriptionItemModel(
             id=uuid.uuid4(),
@@ -277,12 +290,12 @@ async def seed() -> None:
         await db.commit()
         print("* Seed complete!")
         print("\n* Demo Accounts:")
-        print("  admin@arogyanova.dev       | Demo@Admin123     | Administrator")
-        print("  dr.sharma@arogyanova.dev   | Demo@Doctor123    | Doctor")
-        print("  dr.patel@arogyanova.dev    | Demo@Doctor123    | Doctor")
-        print("  patient.ravi@arogyanova.dev | Demo@Patient123  | Patient")
-        print("  patient.priya@arogyanova.dev | Demo@Patient123 | Patient")
-        print("  pharma.anil@arogyanova.dev | Demo@Pharma123    | Pharmacist")
+        print("  admin@arogyanova.dev         | Demo@Admin123    | Administrator")
+        print("  dr.sharma@arogyanova.dev     | Demo@Doctor123   | Doctor")
+        print("  dr.patel@arogyanova.dev      | Demo@Doctor123   | Doctor")
+        print("  patient.ravi@arogyanova.dev  | Demo@Patient123  | Patient")
+        print("  patient.priya@arogyanova.dev | Demo@Patient123  | Patient")
+        print("  pharma.anil@arogyanova.dev   | Demo@Pharma123   | Pharmacist")
 
 
 if __name__ == "__main__":

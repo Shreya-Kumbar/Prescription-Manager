@@ -14,13 +14,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://arogyanova:arogyanova_dev_pass@localhost:5432/arogyanova"
+    # Database: Defaults to zero-config SQLite for instant local runs.
+    # Override via .env or environment variable for PostgreSQL in production.
+    DATABASE_URL: str = "sqlite+aiosqlite:///./arogyanova.db"
 
     # Security
-    SECRET_KEY: str = "change-this-to-a-very-long-random-secret-key"
+    SECRET_KEY: str = "arogyanova-super-secret-development-key-32chars-min-length-ok"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS

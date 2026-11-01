@@ -7,9 +7,7 @@
 [![React](https://img.shields.io/badge/React-18-cyan.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red.svg)](https://www.sqlalchemy.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791.svg)](https://www.postgresql.org/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-54%20Passing-brightgreen.svg)]()
 
 ---
 
@@ -29,15 +27,17 @@ The platform provides distinct, role-tailored workflows:
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Lucide React, Recharts, React Router v6, Axios, React Hot Toast.
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy ORM (AsyncIO), Pydantic v2, SlowAPI rate limiting, Structlog.
-- **Database:** PostgreSQL (Production / Docker) & SQLite+aiosqlite (Zero-config local development).
-- **Security:** Argon2id password hashing, JWT in `HttpOnly` / `SameSite` cookies, Role-Based Access Control (RBAC), Object-Level Authorization, OWASP safeguards.
+- **Database:** SQLite+aiosqlite (Zero-config local development — no install needed) / PostgreSQL (Production / Docker).
+- **Security:** Argon2id password hashing, JWT tokens, Role-Based Access Control (RBAC), Object-Level Authorization, OWASP safeguards.
 - **AI / Decision Support:** Prescription OCR extraction pipeline, rule-backed multi-drug interaction checker, medication adherence analytics.
 
 ---
 
 ## 3. Demo Accounts & One-Click Sign In
 
-The login interface includes **1-Click Demo Buttons** for instant evaluation of all 4 roles:
+The login interface includes **1-Click Demo Buttons** for instant evaluation of all 4 roles.
+
+> **These accounts are created automatically on first startup — no manual seeding needed.**
 
 | Role | Email | Password | Primary Capabilities |
 |---|---|---|---|
@@ -52,29 +52,41 @@ The login interface includes **1-Click Demo Buttons** for instant evaluation of 
 
 ## 4. Quick Start Guide
 
-### Option A: Local Development (Fastest — 0 Docker Required)
+### Option A: Local Development — Zero Config (Recommended)
 
-#### 1. Backend Setup
+**No PostgreSQL, no Docker, no manual database setup needed.**  
+Just clone, install, and run. The app auto-creates the database and demo accounts on first launch.
+
+#### Step 1 — Backend
+
 ```bash
-cd backend
+cd arogyanova/backend
 
-# Create virtual environment with uv or python
-uv venv --python 3.12 .venv
+# Create virtual environment
+python -m venv .venv
+
+# Activate it
+# Windows:
 .venv\Scripts\activate
+# macOS / Linux:
+source .venv/bin/activate
 
-# Install dependencies
-uv pip install -r requirements.txt aiosqlite
+# Install all dependencies (includes aiosqlite for SQLite support)
+pip install -r requirements.txt
 
-# Seed demo accounts and initialize database tables
-python -m app.db.seed
-
-# Start FastAPI development server
-uvicorn app.main:app --reload --port 8000
+# Start the backend — DB tables + demo accounts are created automatically
+python run.py
 ```
 
-#### 2. Frontend Setup
+The backend will start at **http://localhost:8000**.  
+Demo accounts are seeded on the **first launch only** (idempotent).
+
+#### Step 2 — Frontend
+
+Open a **second terminal**:
+
 ```bash
-cd frontend
+cd arogyanova/frontend
 
 # Install packages
 npm install
@@ -85,24 +97,45 @@ npm run dev
 
 Visit:
 - **Web Application:** `http://localhost:5173`
-- **Interactive OpenAPI Docs:** `http://localhost:8000/docs`
-- **Health Check Endpoint:** `http://localhost:8000/health`
+- **Interactive API Docs:** `http://localhost:8000/docs`
+- **Health Check:** `http://localhost:8000/health`
+
+> **Windows note:** If `uvicorn` is blocked by App Control policy, `python run.py` bypasses this by invoking `python -m uvicorn` internally.
 
 ---
 
 ### Option B: Docker Compose
 
 ```bash
-# Start PostgreSQL database, FastAPI backend, and React frontend
+# Start PostgreSQL, FastAPI backend, and React frontend
 docker compose up --build
-
-# Run database migrations and seed script
-docker compose exec backend python -m app.db.seed
 ```
+
+The backend auto-seeds on first startup — no extra steps needed.
 
 ---
 
-## 5. Object-Oriented Methodologies (OOM) Highlights
+## 5. Environment Variables
+
+No `.env` file is required for local development — sensible defaults are built in.
+
+To customise, copy `.env.example` to `.env` and edit:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Key variables:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `DATABASE_URL` | `sqlite+aiosqlite:///./arogyanova.db` | Change to PostgreSQL URL for production |
+| `SECRET_KEY` | Development default | **Override with a long random string in production** |
+| `CORS_ORIGINS` | `http://localhost:5173,...` | Add your frontend URL |
+
+---
+
+## 6. Object-Oriented Methodologies (OOM) Highlights
 
 ArogyaNova is engineered to demonstrate rigorous Object-Oriented Software Engineering:
 
@@ -116,34 +149,30 @@ Detailed viva notes and code mappings: **[docs/oop-design.md](docs/oop-design.md
 
 ---
 
-## 6. Comprehensive Project Documentation
+## 7. Comprehensive Project Documentation
 
 The `docs/` directory contains full technical specifications, diagrams, and viva preparation materials:
 
-- **[OOM Design & SOLID Principles](docs/oop-design.md):** Encapsulation, inheritance, polymorphism, abstraction, and SOLID breakdown.
-- **[UML Class Diagram](docs/class-diagram.md):** Complete Mermaid class diagram of domain entities and repositories.
-- **[Use Case Diagram](docs/use-case-diagram.md):** Actor interactions for Doctor, Patient, Pharmacist, and Admin.
-- **[Sequence & Activity Diagrams](docs/sequence-diagrams.md):** Sequence diagram for prescription creation and state machine workflow.
-- **[ER Diagram & Database Design](docs/er-diagram.md):** Third Normal Form (3NF) relational schema, ACID properties, and constraints.
-- **[Computer Networks Integration](docs/network-architecture.md):** TCP/IP, TLS 1.3, HTTP REST lifecycle, CORS, and connection pooling.
-- **[Cybersecurity Architecture](docs/security.md):** Argon2id hashing, HttpOnly JWT cookies, RBAC, and OWASP Top 10 mitigations.
-- **[REST API Reference](docs/api-documentation.md):** Complete API routes, request/response bodies, and HTTP status codes.
+- **[OOM Design & SOLID Principles](docs/oop-design.md)**
+- **[UML Class Diagram](docs/class-diagram.md)**
+- **[Use Case Diagram](docs/use-case-diagram.md)**
+- **[Sequence & Activity Diagrams](docs/sequence-diagrams.md)**
+- **[ER Diagram & Database Design](docs/er-diagram.md)**
+- **[Computer Networks Integration](docs/network-architecture.md)**
+- **[Cybersecurity Architecture](docs/security.md)**
+- **[REST API Reference](docs/api-documentation.md)**
 
 ---
 
-## 7. Running Backend Tests
-
-The test suite validates domain invariants, encapsulation, RBAC permissions, password validation, and repository persistence:
+## 8. Running Backend Tests
 
 ```bash
-cd backend
+cd arogyanova/backend
 .venv\Scripts\python -m pytest tests -v
 ```
 
-All **54 test cases** execute and pass.
-
 ---
 
-## 8. License & Academic Disclaimer
+## 9. License & Academic Disclaimer
 
 Developed for academic demonstration in Object-Oriented Methodologies (OOM). AI and interaction checks provide clinical decision support and are not intended as independent medical diagnoses.

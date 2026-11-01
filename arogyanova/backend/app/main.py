@@ -27,7 +27,7 @@ from app.api.v1.routes import (
 )
 from app.core.config import settings
 from app.db.database import engine
-from app.models import *  # noqa: F401,F403 — ensure all models are imported for Alembic
+from app.models import *  # noqa: F401,F403 — ensure all models are imported for metadata
 
 logger = structlog.get_logger()
 
@@ -36,8 +36,34 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ------------------------------------------------------------------
+    # Auto-initialise on every startup:
+    #   1. Create all database tables (idempotent — CREATE TABLE IF NOT EXISTS)
+    #   2. Seed demo accounts and sample data (idempotent — skips if users exist)
+    #
+    # This makes the project zero-config for anyone who clones the repo:
+    #   git clone ... -> pip install -r requirements.txt -> python run.py
+    # Works immediately without any manual DB setup or migrations.
+    # ------------------------------------------------------------------
+    from app.models.models import Base  # noqa — ensure models registered
+    from app.db.seed import seed as run_seed
+
     logger.info("ArogyaNova backend starting up", version=settings.VERSION, env=settings.ENVIRONMENT)
+
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables ready")
+    except Exception as exc:
+        logger.error("Failed to create database tables", error=str(exc))
+
+    try:
+        await run_seed()
+    except Exception as exc:
+        logger.warning("Seed skipped or partially failed", error=str(exc))
+
     yield
+
     await engine.dispose()
     logger.info("ArogyaNova backend shutting down")
 
