@@ -51,42 +51,42 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl mx-auto animate-fade-in pb-12">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-text">Account Settings</h2>
-        <p className="text-xs text-text-secondary mt-0.5">
+        <h2 className="text-xl font-bold text-text dark:text-white">Account Settings</h2>
+        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
           Manage your personal profile, credentials, and notification preferences
         </p>
       </div>
 
       {/* Profile Overview */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-text dark:text-white flex items-center gap-2">
           <User className="w-4 h-4 text-primary" /> Profile Information
         </h3>
 
-        <div className="flex items-center gap-4 border-b border-border pb-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">
+        <div className="flex items-center gap-4 border-b border-border dark:border-[#233044] pb-4">
+          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400 flex items-center justify-center font-bold text-xl">
             {user?.first_name?.[0]}
             {user?.last_name?.[0]}
           </div>
           <div>
-            <h4 className="font-bold text-base text-text">
+            <h4 className="font-bold text-base text-text dark:text-white">
               {user?.first_name} {user?.last_name}
             </h4>
-            <p className="text-xs text-text-secondary">{user?.email}</p>
+            <p className="text-xs text-text-secondary dark:text-slate-400">{user?.email}</p>
             <div className="mt-1.5">
               {user?.role && <Badge status={user.role} size="sm" />}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-text-secondary">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-text-secondary dark:text-slate-400">
           <div>
-            <span className="text-text-light block">Account Role</span>
-            <span className="font-semibold text-text capitalize">{user?.role}</span>
+            <span className="text-text-light dark:text-slate-500 block">Account Role</span>
+            <span className="font-semibold text-text dark:text-white capitalize">{user?.role}</span>
           </div>
           <div>
-            <span className="text-text-light block">Member Since</span>
-            <span className="font-semibold text-text">
+            <span className="text-text-light dark:text-slate-500 block">Member Since</span>
+            <span className="font-semibold text-text dark:text-white">
               {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Active'}
             </span>
           </div>
@@ -95,8 +95,8 @@ export default function SettingsPage() {
 
       {/* Change Password Form */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text flex items-center gap-2">
-          <Key className="w-4 h-4 text-primary" /> Security & Password
+        <h3 className="text-sm font-semibold text-text dark:text-white flex items-center gap-2">
+          <Key className="w-4 h-4 text-primary" /> Security &amp; Password
         </h3>
 
         <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md text-xs">
@@ -148,15 +148,15 @@ export default function SettingsPage() {
 
       {/* Notification Preferences */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-text dark:text-white flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" /> Notification Preferences
         </h3>
 
         <div className="space-y-3 text-xs">
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border bg-slate-50/50 cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A] cursor-pointer">
             <div>
-              <span className="font-semibold text-text block">Clinical Status Updates</span>
-              <span className="text-text-secondary text-[11px]">
+              <span className="font-semibold text-text dark:text-white block">Clinical Status Updates</span>
+              <span className="text-text-secondary dark:text-slate-400 text-[11px]">
                 Notify when a prescription is finalized, cancelled, or renewed.
               </span>
             </div>
@@ -168,10 +168,10 @@ export default function SettingsPage() {
             />
           </label>
 
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border bg-slate-50/50 cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A] cursor-pointer">
             <div>
-              <span className="font-semibold text-text block">Medication Dosing Reminders</span>
-              <span className="text-text-secondary text-[11px]">
+              <span className="font-semibold text-text dark:text-white block">Medication Dosing Reminders</span>
+              <span className="text-text-secondary dark:text-slate-400 text-[11px]">
                 Daily prompt for scheduled doses to encourage compliance.
               </span>
             </div>

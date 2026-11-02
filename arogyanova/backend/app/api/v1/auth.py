@@ -137,7 +137,9 @@ async def register(
     await db.commit()
 
     _set_auth_cookies(response, access_token, raw_refresh)
-    return UserDetailResponse.model_validate(user)
+    resp = UserDetailResponse.model_validate(user)
+    resp.access_token = access_token
+    return resp
 
 
 @router.post("/login", response_model=UserDetailResponse)
@@ -191,7 +193,9 @@ async def login(
     await db.commit()
 
     _set_auth_cookies(response, access_token, raw_refresh)
-    return UserDetailResponse.model_validate(user)
+    resp = UserDetailResponse.model_validate(user)
+    resp.access_token = access_token
+    return resp
 
 
 @router.post("/logout", response_model=MessageResponse)

@@ -94,8 +94,8 @@ export default function MedicationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-text">Medication Catalogue</h2>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white">Medication Catalogue</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
             Verified pharmaceutical formulations and therapeutic categories ({medications.length} items)
           </p>
         </div>
@@ -113,7 +113,7 @@ export default function MedicationsPage() {
       {/* Search and Category Filters */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light dark:text-slate-500" />
           <input
             type="text"
             value={searchTerm}
@@ -124,7 +124,7 @@ export default function MedicationsPage() {
         </div>
 
         <div className="w-full md:w-auto flex items-center gap-2">
-          <Filter className="w-4 h-4 text-text-secondary" />
+          <Filter className="w-4 h-4 text-text-secondary dark:text-slate-400" />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -143,14 +143,14 @@ export default function MedicationsPage() {
       {/* Medications Table */}
       {isLoading ? (
         <div className="card p-8 space-y-4 animate-pulse">
-          <div className="h-6 bg-slate-100 rounded w-1/4" />
-          <div className="h-40 bg-slate-100 rounded" />
+          <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-1/4" />
+          <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded" />
         </div>
       ) : filtered.length > 0 ? (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                 <tr>
                   <th className="py-3 px-4">Generic Name</th>
                   <th className="py-3 px-4">Brand Name</th>
@@ -160,26 +160,26 @@ export default function MedicationsPage() {
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border dark:divide-[#233044]">
                 {filtered.map((m) => (
-                  <tr key={m.id} className="hover:bg-teal-50/20 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-text flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-50 text-primary flex items-center justify-center shrink-0">
+                  <tr key={m.id} className="hover:bg-teal-50/20 dark:hover:bg-teal-950/20 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-text dark:text-white flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 flex items-center justify-center shrink-0">
                         <Pill className="w-3.5 h-3.5" />
                       </div>
                       {m.generic_name}
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">
                       {m.brand_name || '—'}
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-text">
+                    <td className="py-3.5 px-4 font-mono font-medium text-text dark:text-slate-200">
                       {m.strength}
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">{m.dosage_form}</td>
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">{m.dosage_form}</td>
                     <td className="py-3.5 px-4">
                       {m.category ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
-                          <Tag className="w-3 h-3 text-text-light" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          <Tag className="w-3 h-3 text-text-light dark:text-slate-500" />
                           {m.category}
                         </span>
                       ) : (
@@ -187,7 +187,7 @@ export default function MedicationsPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
                         <Check className="w-3 h-3" /> Available
                       </span>
                     </td>
@@ -287,7 +287,7 @@ export default function MedicationsPage() {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border dark:border-[#233044]">
             <button
               type="button"
               onClick={() => setShowAddModal(false)}

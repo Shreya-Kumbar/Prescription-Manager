@@ -94,17 +94,17 @@ export default function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed top-0 left-0 bottom-0 z-40 bg-white border-r border-border transition-all duration-300 flex flex-col ${
+      className={`fixed top-0 left-0 bottom-0 z-40 bg-white dark:bg-[#131C31] border-r border-border dark:border-[#233044] transition-all duration-300 flex flex-col ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-border dark:border-[#233044]">
         <div className="flex items-center gap-3 overflow-hidden">
           <img src="/logo.svg" alt="ArogyaNova" className="w-8 h-8 shrink-0" />
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-base text-text tracking-tight">ArogyaNova</span>
+              <span className="font-bold text-base text-text dark:text-white tracking-tight">ArogyaNova</span>
               <span className="text-[10px] text-primary font-medium tracking-wide">
                 PRESCRIPTION SYSTEM
               </span>
@@ -113,7 +113,7 @@ export default function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
         </div>
         <button
           onClick={toggleCollapse}
-          className="p-1.5 rounded-lg text-text-secondary hover:bg-background hover:text-text transition-colors"
+          className="p-1.5 rounded-lg text-text-secondary dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 hover:text-text dark:hover:text-white transition-colors"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -131,8 +131,8 @@ export default function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-text-secondary hover:bg-background hover:text-text'
+                    ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-teal-400 font-semibold'
+                    : 'text-text-secondary dark:text-slate-300 hover:bg-background dark:hover:bg-slate-800/80 hover:text-text dark:hover:text-white'
                 } ${isCollapsed ? 'justify-center' : ''}`
               }
               title={isCollapsed ? item.label : undefined}
@@ -145,7 +145,7 @@ export default function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
       </div>
 
       {/* User Info Bottom */}
-      <div className="p-3 border-t border-border bg-slate-50/50">
+      <div className="p-3 border-t border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A]/60">
         <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-xs shrink-0">
             {user?.first_name?.[0]}
@@ -153,10 +153,10 @@ export default function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-semibold text-text truncate">
+              <span className="text-xs font-semibold text-text dark:text-white truncate">
                 {user?.role === 'doctor' ? `Dr. ${user?.first_name} ${user?.last_name}` : `${user?.first_name} ${user?.last_name}`}
               </span>
-              <span className="text-[11px] text-text-secondary capitalize truncate">
+              <span className="text-[11px] text-text-secondary dark:text-slate-400 capitalize truncate">
                 {user?.role}
               </span>
             </div>

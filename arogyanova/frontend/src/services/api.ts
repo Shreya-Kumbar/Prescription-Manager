@@ -11,6 +11,15 @@ const api = axios.create({
   },
 });
 
+// Request interceptor — attach Bearer token if present
+api.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('arogyanova_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response interceptor — handle global errors
 api.interceptors.response.use(
   (response) => response,
@@ -20,6 +29,7 @@ api.interceptors.response.use(
       const message = error.response.data?.detail ?? 'An error occurred.';
 
       if (status === 401) {
+        sessionStorage.removeItem('arogyanova_token');
         // Session expired — redirect to login
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';

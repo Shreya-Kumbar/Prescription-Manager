@@ -33,6 +33,7 @@ export interface User {
   role: UserRole;
   is_active: boolean;
   created_at: string;
+  access_token?: string;
   doctor_profile?: DoctorProfile | null;
   patient_profile?: PatientProfile | null;
   pharmacist_profile?: PharmacistProfile | null;

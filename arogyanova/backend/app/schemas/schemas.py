@@ -74,6 +74,7 @@ class UserResponse(BaseModel):
 
 
 class UserDetailResponse(UserResponse):
+    access_token: Optional[str] = None
     doctor_profile: Optional[DoctorProfileResponse] = None
     patient_profile: Optional[PatientProfileResponse] = None
     pharmacist_profile: Optional[PharmacistProfileResponse] = None

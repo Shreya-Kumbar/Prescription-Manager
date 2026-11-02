@@ -52,8 +52,8 @@ export default function UsersPage() {
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-text">User Account Administration</h2>
-        <p className="text-xs text-text-secondary mt-0.5">
+        <h2 className="text-xl font-bold text-text dark:text-white">User Account Administration</h2>
+        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
           Manage system credentials, professional role assignments, and active account status
         </p>
       </div>
@@ -61,7 +61,7 @@ export default function UsersPage() {
       {/* Filter and Search Bar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="w-full md:w-80 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light dark:text-slate-500" />
           <input
             type="text"
             value={searchTerm}
@@ -72,7 +72,7 @@ export default function UsersPage() {
         </form>
 
         <div className="w-full md:w-auto flex items-center gap-2">
-          <Filter className="w-4 h-4 text-text-secondary" />
+          <Filter className="w-4 h-4 text-text-secondary dark:text-slate-400" />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -90,14 +90,14 @@ export default function UsersPage() {
       {/* Users Table */}
       {isLoading ? (
         <div className="card p-8 space-y-4 animate-pulse">
-          <div className="h-6 bg-slate-100 rounded w-1/4" />
-          <div className="h-40 bg-slate-100 rounded" />
+          <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-1/4" />
+          <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded" />
         </div>
       ) : users.length > 0 ? (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                 <tr>
                   <th className="py-3 px-4">User</th>
                   <th className="py-3 px-4">Role</th>
@@ -107,43 +107,43 @@ export default function UsersPage() {
                   <th className="py-3 px-4 text-right">Account Control</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border dark:divide-[#233044]">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/50">
+                  <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400 flex items-center justify-center font-bold text-xs">
                           {u.first_name[0]}
                           {u.last_name[0]}
                         </div>
                         <div>
-                          <p className="font-semibold text-text">
+                          <p className="font-semibold text-text dark:text-white">
                             {u.first_name} {u.last_name}
                           </p>
-                          <p className="text-text-secondary text-[11px]">{u.email}</p>
+                          <p className="text-text-secondary dark:text-slate-400 text-[11px]">{u.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge status={u.role} size="sm" />
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">
                       {u.doctor_profile?.license_number ||
                         u.pharmacist_profile?.license_number ||
                         (u.patient_profile?.blood_group ? `Blood: ${u.patient_profile.blood_group}` : 'Standard Account')}
                     </td>
                     <td className="py-3.5 px-4">
                       {u.is_active ? (
-                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                           <Check className="w-3 h-3" /> Active
                         </span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/40 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
                           <X className="w-3 h-3" /> Deactivated
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -151,8 +151,8 @@ export default function UsersPage() {
                         onClick={() => toggleUserActive(u)}
                         className={`text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${
                           u.is_active
-                            ? 'border-rose-200 text-rose-700 hover:bg-rose-50'
-                            : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                            ? 'border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/30'
+                            : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-950/30'
                         }`}
                       >
                         {u.is_active ? 'Deactivate' : 'Activate'}

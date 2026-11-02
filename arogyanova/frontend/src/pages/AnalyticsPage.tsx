@@ -25,6 +25,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import StatCard from '../components/ui/StatCard';
+import { useTheme } from '../context/ThemeContext';
 
 const STATUS_COLORS: Record<string, string> = {
   active: '#0F9F91',
@@ -34,6 +35,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
+  const { isDark } = useTheme();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -106,8 +108,8 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-text">Clinical Analytics & Reports</h2>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white">Clinical Analytics &amp; Reports</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
             Prescription volume metrics, medication compliance trends, and service health
           </p>
         </div>
@@ -157,20 +159,21 @@ export default function AnalyticsPage() {
         {/* Monthly Volume Bar Chart */}
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text">Prescription Volume Trends</h3>
-            <span className="text-[11px] text-text-secondary">Past 6 Months</span>
+            <h3 className="text-sm font-semibold text-text dark:text-white">Prescription Volume Trends</h3>
+            <span className="text-[11px] text-text-secondary dark:text-slate-400">Past 6 Months</span>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5EAF0" />
-                <XAxis dataKey="month" stroke="#64748B" fontSize={11} />
-                <YAxis stroke="#64748B" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#233044' : '#E5EAF0'} />
+                <XAxis dataKey="month" stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} />
+                <YAxis stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    borderColor: '#E5EAF0',
+                    backgroundColor: isDark ? '#131C31' : '#fff',
+                    borderColor: isDark ? '#233044' : '#E5EAF0',
+                    color: isDark ? '#F1F5F9' : '#172B3A',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -184,20 +187,21 @@ export default function AnalyticsPage() {
         {/* Weekly Adherence Line Chart */}
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text">Medication Compliance (%)</h3>
-            <span className="text-[11px] text-text-secondary">7-Day Moving Average</span>
+            <h3 className="text-sm font-semibold text-text dark:text-white">Medication Compliance (%)</h3>
+            <span className="text-[11px] text-text-secondary dark:text-slate-400">7-Day Moving Average</span>
           </div>
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={adherenceWeekly}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5EAF0" />
-                <XAxis dataKey="day" stroke="#64748B" fontSize={11} />
-                <YAxis domain={[80, 100]} stroke="#64748B" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#233044' : '#E5EAF0'} />
+                <XAxis dataKey="day" stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} />
+                <YAxis domain={[80, 100]} stroke={isDark ? '#94A3B8' : '#64748B'} fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    borderColor: '#E5EAF0',
+                    backgroundColor: isDark ? '#131C31' : '#fff',
+                    borderColor: isDark ? '#233044' : '#E5EAF0',
+                    color: isDark ? '#F1F5F9' : '#172B3A',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}

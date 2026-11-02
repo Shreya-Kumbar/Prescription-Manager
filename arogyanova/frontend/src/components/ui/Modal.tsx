@@ -35,17 +35,17 @@ export default function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
       <div
-        className={`w-full ${maxWidthClasses[maxWidth]} bg-white rounded-card shadow-card-lg border border-border overflow-hidden`}
+        className={`w-full ${maxWidthClasses[maxWidth]} bg-white dark:bg-[#131C31] rounded-card shadow-card-lg border border-border dark:border-[#233044] overflow-hidden text-text dark:text-[#F1F5F9]`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="text-base font-semibold text-text">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-[#233044]">
+          <h3 className="text-base font-semibold text-text dark:text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-secondary hover:bg-background transition-colors"
+            className="p-1 rounded-lg text-text-secondary dark:text-slate-400 hover:bg-background dark:hover:bg-slate-800 hover:text-text dark:hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

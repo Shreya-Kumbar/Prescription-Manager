@@ -19,3 +19,4 @@ pillow==10.4.0
 slowapi==0.1.9
 structlog==24.2.0
 python-dotenv==1.0.1
+aiosqlite==0.22.1

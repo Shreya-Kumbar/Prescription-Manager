@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Optional
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,19 +18,26 @@ from app.security.passwords import decode_access_token
 
 async def get_current_user_id_and_role(
     access_token: Annotated[Optional[str], Cookie()] = None,
+    authorization: Annotated[Optional[str], Header()] = None,
 ) -> tuple[uuid.UUID, str]:
     """
-    Extract and validate the current user from the JWT cookie.
+    Extract and validate the current user from the JWT cookie or Authorization Bearer header.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required. Please log in.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if not access_token:
+    token = access_token
+    if not token and authorization:
+        parts = authorization.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+
+    if not token:
         raise credentials_exception
     try:
-        payload = decode_access_token(access_token)
+        payload = decode_access_token(token)
         user_id_str: str = payload.get("sub")
         role: str = payload.get("role")
         if not user_id_str or not role:

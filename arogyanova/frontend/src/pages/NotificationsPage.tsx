@@ -51,13 +51,13 @@ export default function NotificationsPage() {
   const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case 'urgent':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800';
       case 'high':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800';
       case 'normal':
-        return 'bg-teal-50 text-teal-700 border-teal-200';
+        return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
     }
   };
 
@@ -66,8 +66,8 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-text">Notifications</h2>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white">Notifications</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
             System announcements, clinical alerts, and prescription status changes
           </p>
         </div>
@@ -80,11 +80,11 @@ export default function NotificationsPage() {
       </div>
 
       {/* Notifications List */}
-      <div className="card divide-y divide-border">
+      <div className="card divide-y divide-border dark:divide-[#233044]">
         {isLoading ? (
           <div className="p-8 space-y-4 animate-pulse">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-slate-100 rounded-lg" />
+              <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-lg" />
             ))}
           </div>
         ) : notifications.length > 0 ? (
@@ -92,20 +92,24 @@ export default function NotificationsPage() {
             <div
               key={n.id}
               className={`p-4 flex items-start justify-between gap-4 transition-colors ${
-                n.is_read ? 'bg-white' : 'bg-teal-50/20'
+                n.is_read
+                  ? 'bg-white dark:bg-[#131C31]'
+                  : 'bg-teal-50/20 dark:bg-teal-950/10'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`p-2 rounded-lg mt-0.5 ${
-                    n.is_read ? 'bg-slate-100 text-slate-500' : 'bg-primary/10 text-primary'
+                    n.is_read
+                      ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      : 'bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400'
                   }`}
                 >
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-xs text-text">{n.title}</h4>
+                    <h4 className="font-semibold text-xs text-text dark:text-white">{n.title}</h4>
                     <span
                       className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getPriorityStyle(
                         n.priority
@@ -117,8 +121,8 @@ export default function NotificationsPage() {
                       <span className="w-2 h-2 rounded-full bg-primary" title="Unread" />
                     )}
                   </div>
-                  <p className="text-xs text-text-secondary mt-1">{n.message}</p>
-                  <span className="text-[10px] text-text-light mt-1.5 block flex items-center gap-1">
+                  <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">{n.message}</p>
+                  <span className="text-[10px] text-text-light dark:text-slate-500 mt-1.5 block flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {new Date(n.created_at).toLocaleString()}
                   </span>

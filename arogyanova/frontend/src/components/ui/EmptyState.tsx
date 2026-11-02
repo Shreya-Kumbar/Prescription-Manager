@@ -18,11 +18,11 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="card p-12 text-center flex flex-col items-center justify-center">
-      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+      <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-teal-300 flex items-center justify-center mb-4">
         <Icon className="w-6 h-6" />
       </div>
-      <h3 className="text-base font-semibold text-text">{title}</h3>
-      <p className="text-sm text-text-secondary max-w-sm mt-1 mb-6">{description}</p>
+      <h3 className="text-base font-semibold text-text dark:text-white">{title}</h3>
+      <p className="text-sm text-text-secondary dark:text-slate-400 max-w-sm mt-1 mb-6">{description}</p>
       {actionText && onAction && (
         <button onClick={onAction} className="btn-primary text-sm">
           {actionText}

@@ -56,15 +56,17 @@ async def seed() -> None:
     print("* Starting ArogyaNova seed...")
 
     async with AsyncSessionLocal() as db:
-        # Create medications
+        # 1. Medications
         med_ids: dict[str, uuid.UUID] = {}
         print("  Creating medication catalogue...")
         for m in MEDICATIONS:
             mid = uuid.uuid4()
             med_ids[m["generic_name"]] = mid
             db.add(MedicationModel(id=mid, **m, is_active=True))
+        await db.flush()
 
-        # Admin
+        # 2. Users and Profiles
+        print("  Creating demo user accounts...")
         admin_id = uuid.uuid4()
         db.add(UserModel(
             id=admin_id,
@@ -162,8 +164,9 @@ async def seed() -> None:
             pharmacy_name="MedCare Pharmacy",
             phone="+91-9765432100",
         ))
+        await db.flush()
 
-        # Sample prescriptions
+        # 3. Sample prescriptions
         today = date.today()
 
         # Prescription 1: Active (finalized)
@@ -207,6 +210,7 @@ async def seed() -> None:
             instructions="Do not exceed 8 tablets (4g) in 24 hours.",
             start_date=today - timedelta(days=7),
         ))
+        await db.flush()
 
         # Add schedule entries
         for day in range(7):

@@ -69,8 +69,8 @@ export default function MedicationSchedulePage() {
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-text">Medication Schedule & Adherence</h2>
-        <p className="text-xs text-text-secondary mt-0.5">
+        <h2 className="text-xl font-bold text-text dark:text-white">Medication Schedule &amp; Adherence</h2>
+        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
           Patient medication schedule generated from active prescriptions
         </p>
       </div>
@@ -108,8 +108,8 @@ export default function MedicationSchedulePage() {
       </div>
 
       {/* Advisory Banner */}
-      <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 text-xs flex items-center gap-2.5 text-teal-900">
-        <AlertCircle className="w-4 h-4 text-primary shrink-0" />
+      <div className="p-3.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/40 text-xs flex items-center gap-2.5 text-teal-900 dark:text-teal-200">
+        <AlertCircle className="w-4 h-4 text-primary dark:text-teal-400 shrink-0" />
         <span>
           <strong>Clinical Note:</strong> ArogyaNova tracks user-reported medication compliance.
           Doses marked as taken provide decision-support analytics for your healthcare team.
@@ -118,12 +118,12 @@ export default function MedicationSchedulePage() {
 
       {/* Schedule Entries */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-text mb-4">Daily Dosing Schedule</h3>
+        <h3 className="text-sm font-semibold text-text dark:text-white mb-4">Daily Dosing Schedule</h3>
 
         {isLoading ? (
           <div className="space-y-3 animate-pulse">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-slate-100 rounded-xl" />
+              <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl" />
             ))}
           </div>
         ) : schedule.length > 0 ? (
@@ -143,28 +143,28 @@ export default function MedicationSchedulePage() {
               return (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-xl border border-border bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                  className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#162238] transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 rounded-lg bg-teal-50 text-primary mt-0.5">
+                    <div className="p-2.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 mt-0.5">
                       <Pill className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm text-text">
+                      <h4 className="font-semibold text-sm text-text dark:text-white">
                         {entry.medication_name} — {entry.dosage}
                       </h4>
-                      <div className="flex items-center gap-3 text-xs text-text-secondary mt-1">
-                        <span className="flex items-center gap-1 font-medium text-text">
-                          <CalendarIcon className="w-3.5 h-3.5 text-text-light" />
+                      <div className="flex items-center gap-3 text-xs text-text-secondary dark:text-slate-400 mt-1">
+                        <span className="flex items-center gap-1 font-medium text-text dark:text-slate-200">
+                          <CalendarIcon className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
                           {formattedDate}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-text-light" />
+                          <Clock className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
                           {formattedTime}
                         </span>
                       </div>
                       {entry.instructions && (
-                        <p className="text-[11px] text-text-light mt-1 italic">
+                        <p className="text-[11px] text-text-light dark:text-slate-400 mt-1 italic">
                           Instructions: {entry.instructions}
                         </p>
                       )}
@@ -176,8 +176,8 @@ export default function MedicationSchedulePage() {
                       <span
                         className={`text-xs px-3 py-1.5 rounded-full font-medium inline-flex items-center gap-1.5 ${
                           entry.logged_action === 'taken'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/40'
                         }`}
                       >
                         {entry.logged_action === 'taken' ? (
@@ -197,7 +197,7 @@ export default function MedicationSchedulePage() {
                         </button>
                         <button
                           onClick={() => handleLogAction(entry.id, 'skipped')}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
                         >
                           <X className="w-3.5 h-3.5" /> Skip
                         </button>

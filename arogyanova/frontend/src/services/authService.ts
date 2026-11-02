@@ -22,16 +22,26 @@ export interface RegisterData {
 export const authService = {
   async login(credentials: LoginCredentials): Promise<User> {
     const { data } = await api.post<User>('/auth/login', credentials);
+    if (data.access_token) {
+      sessionStorage.setItem('arogyanova_token', data.access_token);
+    }
     return data;
   },
 
   async register(registerData: RegisterData): Promise<User> {
     const { data } = await api.post<User>('/auth/register', registerData);
+    if (data.access_token) {
+      sessionStorage.setItem('arogyanova_token', data.access_token);
+    }
     return data;
   },
 
   async logout(): Promise<void> {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      sessionStorage.removeItem('arogyanova_token');
+    }
   },
 
   async getCurrentUser(): Promise<User> {

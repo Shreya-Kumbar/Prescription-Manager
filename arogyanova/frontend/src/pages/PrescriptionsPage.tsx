@@ -91,8 +91,8 @@ export default function PrescriptionsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-text">Prescriptions</h2>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white">Prescriptions</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
             {total} total records found in ArogyaNova database
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function PrescriptionsPage() {
       {/* Filter and Search Bar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="w-full md:w-80 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light dark:text-slate-500" />
           <input
             type="text"
             value={searchTerm}
@@ -123,7 +123,7 @@ export default function PrescriptionsPage() {
 
         <div className="w-full md:w-auto flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-text-secondary shrink-0" />
+            <Filter className="w-4 h-4 text-text-secondary dark:text-slate-400 shrink-0" />
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -145,14 +145,14 @@ export default function PrescriptionsPage() {
       {/* Records Table */}
       {isLoading ? (
         <div className="card p-8 space-y-4 animate-pulse">
-          <div className="h-6 bg-slate-100 rounded w-1/4" />
-          <div className="h-40 bg-slate-100 rounded" />
+          <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-1/4" />
+          <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded" />
         </div>
       ) : prescriptions.length > 0 ? (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                 <tr>
                   <th className="py-3 px-4">Prescription ID</th>
                   <th className="py-3 px-4">Status</th>
@@ -163,36 +163,36 @@ export default function PrescriptionsPage() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border dark:divide-[#233044]">
                 {prescriptions.map((p) => (
                   <tr
                     key={p.id}
                     onClick={() => navigate(`/prescriptions/${p.id}`)}
-                    className="hover:bg-teal-50/30 cursor-pointer transition-colors"
+                    className="hover:bg-teal-50/30 dark:hover:bg-teal-950/20 cursor-pointer transition-colors"
                   >
-                    <td className="py-3.5 px-4 font-mono font-medium text-text">
+                    <td className="py-3.5 px-4 font-mono font-medium text-text dark:text-white">
                       #{p.id.slice(0, 8)}
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge status={p.status} size="sm" />
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-semibold text-text">
+                      <span className="font-semibold text-text dark:text-white">
                         {p.patient ? `${p.patient.first_name} ${p.patient.last_name}` : 'Authorized Patient'}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">
                       {p.doctor ? `Dr. ${p.doctor.first_name} ${p.doctor.last_name}` : 'Staff Physician'}
                     </td>
-                    <td className="py-3.5 px-4 text-text-secondary">{p.issue_date}</td>
-                    <td className="py-3.5 px-4 font-semibold text-text">
+                    <td className="py-3.5 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
+                    <td className="py-3.5 px-4 font-semibold text-text dark:text-white">
                       {p.item_count} items
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => navigate(`/prescriptions/${p.id}`)}
-                          className="p-1 rounded text-text-secondary hover:text-primary hover:bg-slate-100"
+                          className="p-1 rounded text-text-secondary hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -201,7 +201,7 @@ export default function PrescriptionsPage() {
                         {user?.role === 'doctor' && p.status === 'draft' && (
                           <button
                             onClick={(e) => handleFinalize(p.id, e)}
-                            className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
+                            className="p-1 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                             title="Finalize Draft"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -211,7 +211,7 @@ export default function PrescriptionsPage() {
                         {user?.role === 'doctor' && p.status !== 'cancelled' && p.status !== 'completed' && (
                           <button
                             onClick={(e) => handleCancel(p.id, e)}
-                            className="p-1 rounded text-rose-500 hover:bg-rose-50"
+                            className="p-1 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                             title="Cancel Prescription"
                           >
                             <XCircle className="w-4 h-4" />
@@ -227,20 +227,20 @@ export default function PrescriptionsPage() {
 
           {/* Pagination Controls */}
           {total > 15 && (
-            <div className="p-4 border-t border-border flex items-center justify-between text-xs text-text-secondary">
+            <div className="p-4 border-t border-border dark:border-[#233044] flex items-center justify-between text-xs text-text-secondary dark:text-slate-400">
               <span>Showing Page {page}</span>
               <div className="flex items-center gap-2">
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="px-3 py-1 rounded border border-border disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-border dark:border-[#233044] disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   disabled={page * 15 >= total}
                   onClick={() => setPage(page + 1)}
-                  className="px-3 py-1 rounded border border-border disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-border dark:border-[#233044] disabled:opacity-50"
                 >
                   Next
                 </button>

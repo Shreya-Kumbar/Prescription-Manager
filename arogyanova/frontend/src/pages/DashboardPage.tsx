@@ -59,10 +59,10 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="card p-6 h-32 animate-pulse bg-slate-100" />
+            <div key={i} className="card p-6 h-32 animate-pulse bg-slate-100 dark:bg-slate-800" />
           ))}
         </div>
-        <div className="card p-6 h-64 animate-pulse bg-slate-100" />
+        <div className="card p-6 h-64 animate-pulse bg-slate-100 dark:bg-slate-800" />
       </div>
     );
   }
@@ -73,16 +73,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Welcome Banner */}
-      <div className="card p-6 bg-gradient-to-r from-teal-50 via-white to-slate-50 border-teal-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="card p-6 bg-gradient-to-r from-teal-50 via-white to-slate-50 dark:from-teal-950/40 dark:via-[#131C31] dark:to-slate-900/60 border-teal-100 dark:border-teal-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+          <span className="text-xs font-semibold text-primary dark:text-teal-400 uppercase tracking-wider">
             {role?.toUpperCase()} PORTAL
           </span>
-          <h2 className="text-xl font-bold text-text mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white mt-0.5">
             Welcome back, {role === 'doctor' ? `Dr. ${user?.first_name} ${user?.last_name}` : user?.first_name}!
           </h2>
-          <p className="text-xs text-text-secondary mt-1">
-            ArogyaNova Intelligent Prescription Management & Medication Care System.
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">
+            ArogyaNova Intelligent Prescription Management &amp; Medication Care System.
           </p>
         </div>
 
@@ -132,14 +132,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-text text-sm">Recent Prescriptions Authored</h3>
-                <p className="text-xs text-text-secondary">Latest clinical prescriptions issued</p>
+                <h3 className="font-semibold text-text dark:text-white text-sm">Recent Prescriptions Authored</h3>
+                <p className="text-xs text-text-secondary dark:text-slate-400">Latest clinical prescriptions issued</p>
               </div>
               <button
                 onClick={() => navigate('/prescriptions')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
               >
                 View all <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
             {stats.recent_prescriptions?.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                     <tr>
                       <th className="py-3 px-4">Date</th>
                       <th className="py-3 px-4">Status</th>
@@ -156,20 +156,20 @@ export default function DashboardPage() {
                       <th className="py-3 px-4 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-border dark:divide-[#233044]">
                     {stats.recent_prescriptions.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 px-4 text-text-secondary">{p.issue_date}</td>
+                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
+                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
                         <td className="py-3 px-4">
                           <Badge status={p.status} size="sm" />
                         </td>
-                        <td className="py-3 px-4 font-medium text-text">
+                        <td className="py-3 px-4 font-medium text-text dark:text-white">
                           {p.diagnosis || 'Clinical evaluation'}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => navigate(`/prescriptions/${p.id}`)}
-                            className="text-primary hover:underline font-semibold"
+                            className="text-primary dark:text-teal-400 hover:underline font-semibold"
                           >
                             Details
                           </button>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
               color="primary"
             />
             <StatCard
-              title="Total Prescribed"
+              title="Total Prescriptions"
               value={stats.total_prescriptions ?? 0}
               subtitle="Lifetime prescriptions"
               icon={Activity}
@@ -223,14 +223,14 @@ export default function DashboardPage() {
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-text text-sm">Today's Medication Doses</h3>
-                <p className="text-xs text-text-secondary">
+                <h3 className="font-semibold text-text dark:text-white text-sm">Today's Medication Doses</h3>
+                <p className="text-xs text-text-secondary dark:text-slate-400">
                   Record your medication intake to maintain accurate adherence records
                 </p>
               </div>
               <button
                 onClick={() => navigate('/schedule')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
               >
                 Full Schedule <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -241,17 +241,17 @@ export default function DashboardPage() {
                 {stats.today_schedule.map((entry: any) => (
                   <div
                     key={entry.id}
-                    className="p-4 rounded-xl border border-border bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-teal-50 text-primary mt-0.5">
+                      <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 mt-0.5">
                         <Pill className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-text">
+                        <p className="font-semibold text-sm text-text dark:text-white">
                           {entry.medication_name} — {entry.dosage}
                         </p>
-                        <p className="text-xs text-text-secondary mt-0.5">
+                        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
                           {new Date(entry.scheduled_time).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -265,8 +265,8 @@ export default function DashboardPage() {
                         <span
                           className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                             entry.logged_action === 'taken'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/40'
                           }`}
                         >
                           Marked as {entry.logged_action}
@@ -281,7 +281,7 @@ export default function DashboardPage() {
                           </button>
                           <button
                             onClick={() => handleLogSchedule(entry.id, 'skipped')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
                           >
                             <X className="w-3.5 h-3.5" /> Skipped
                           </button>
@@ -330,14 +330,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-text text-sm">Review Queue</h3>
-                <p className="text-xs text-text-secondary">Prescriptions awaiting pharmacist verification</p>
+                <h3 className="font-semibold text-text dark:text-white text-sm">Review Queue</h3>
+                <p className="text-xs text-text-secondary dark:text-slate-400">Prescriptions awaiting pharmacist verification</p>
               </div>
               <button
                 onClick={() => navigate('/prescriptions')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
               >
                 Search all records <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -346,7 +346,7 @@ export default function DashboardPage() {
             {stats.recent_prescriptions?.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                     <tr>
                       <th className="py-3 px-4">Issue Date</th>
                       <th className="py-3 px-4">Status</th>
@@ -354,18 +354,18 @@ export default function DashboardPage() {
                       <th className="py-3 px-4 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-border dark:divide-[#233044]">
                     {stats.recent_prescriptions.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-4 text-text-secondary">{p.issue_date}</td>
+                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
+                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
                         <td className="py-3 px-4">
                           <Badge status={p.status} size="sm" />
                         </td>
-                        <td className="py-3 px-4 font-medium text-text">{p.diagnosis || 'Clinical evaluation'}</td>
+                        <td className="py-3 px-4 font-medium text-text dark:text-white">{p.diagnosis || 'Clinical evaluation'}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => navigate(`/prescriptions/${p.id}`)}
-                            className="text-primary hover:underline font-semibold"
+                            className="text-primary dark:text-teal-400 hover:underline font-semibold"
                           >
                             Review Details
                           </button>
@@ -421,14 +421,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-text text-sm">System Security Audit Log</h3>
-                <p className="text-xs text-text-secondary">Security events and user action traces</p>
+                <h3 className="font-semibold text-text dark:text-white text-sm">System Security Audit Log</h3>
+                <p className="text-xs text-text-secondary dark:text-slate-400">Security events and user action traces</p>
               </div>
               <button
                 onClick={() => navigate('/users')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
               >
                 Manage users <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -437,7 +437,7 @@ export default function DashboardPage() {
             {stats.recent_audits?.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-text-secondary uppercase text-[10px] tracking-wider border-b border-border">
+                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
                     <tr>
                       <th className="py-3 px-4">Timestamp</th>
                       <th className="py-3 px-4">Action</th>
@@ -445,15 +445,15 @@ export default function DashboardPage() {
                       <th className="py-3 px-4">Client IP</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-border dark:divide-[#233044]">
                     {stats.recent_audits.map((a: any) => (
-                      <tr key={a.id} className="hover:bg-slate-50/50 font-mono text-[11px]">
-                        <td className="py-3 px-4 text-text-secondary">
+                      <tr key={a.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] font-mono text-[11px] transition-colors">
+                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">
                           {new Date(a.created_at).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 font-semibold text-text">{a.action}</td>
-                        <td className="py-3 px-4 text-text-secondary">{a.resource_type}</td>
-                        <td className="py-3 px-4 text-text-secondary">{a.ip_address || '127.0.0.1'}</td>
+                        <td className="py-3 px-4 font-semibold text-text dark:text-white">{a.action}</td>
+                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{a.resource_type}</td>
+                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{a.ip_address || '127.0.0.1'}</td>
                       </tr>
                     ))}
                   </tbody>

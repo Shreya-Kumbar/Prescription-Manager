@@ -38,8 +38,8 @@ export default function PatientsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-text">Patient Directory</h2>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <h2 className="text-xl font-bold text-text dark:text-white">Patient Directory</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
             Authorized patient profiles and clinical history
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function PatientsPage() {
       {/* Search Bar */}
       <div className="card p-4">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-text-light dark:text-slate-500" />
           <input
             type="text"
             value={searchTerm}
@@ -63,7 +63,7 @@ export default function PatientsPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card p-6 h-40 bg-slate-100" />
+            <div key={i} className="card p-6 h-40 bg-slate-100 dark:bg-slate-800" />
           ))}
         </div>
       ) : filtered.length > 0 ? (
@@ -72,7 +72,7 @@ export default function PatientsPage() {
             <div
               key={patient.id}
               onClick={() => navigate(`/patients/${patient.id}`)}
-              className="card p-5 hover:shadow-card-hover cursor-pointer transition-all border border-border flex flex-col justify-between"
+              className="card p-5 hover:shadow-card-hover cursor-pointer transition-all border border-border dark:border-[#233044] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between">
@@ -82,26 +82,26 @@ export default function PatientsPage() {
                       {patient.last_name[0]}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm text-text">
+                      <h3 className="font-semibold text-sm text-text dark:text-white">
                         {patient.first_name} {patient.last_name}
                       </h3>
-                      <p className="text-[11px] text-text-secondary flex items-center gap-1 mt-0.5">
+                      <p className="text-[11px] text-text-secondary dark:text-slate-400 flex items-center gap-1 mt-0.5">
                         <Mail className="w-3 h-3" /> {patient.email}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-border space-y-1.5 text-xs text-text-secondary">
+                <div className="mt-4 pt-3 border-t border-border dark:border-[#233044] space-y-1.5 text-xs text-text-secondary dark:text-slate-400">
                   {patient.patient_profile?.phone && (
                     <p className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-text-light" />
+                      <Phone className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
                       {patient.patient_profile.phone}
                     </p>
                   )}
                   {patient.patient_profile?.date_of_birth && (
                     <p className="flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-text-light" />
+                      <Calendar className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
                       DOB: {patient.patient_profile.date_of_birth}
                     </p>
                   )}
@@ -114,7 +114,7 @@ export default function PatientsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-primary font-semibold">
+              <div className="mt-4 pt-3 border-t border-border dark:border-[#233044] flex items-center justify-between text-xs text-primary font-semibold">
                 <span>View Full Clinical Record</span>
                 <Eye className="w-4 h-4" />
               </div>

@@ -215,13 +215,13 @@ export default function CreatePrescriptionPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/prescriptions')}
-            className="p-2 rounded-lg border border-border bg-white text-text-secondary hover:text-text hover:bg-slate-50 transition-colors"
+            className="p-2 rounded-lg border border-border dark:border-[#233044] bg-white dark:bg-[#162238] text-text-secondary dark:text-slate-300 hover:text-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-text">New Clinical Prescription</h2>
-            <p className="text-xs text-text-secondary">
+            <h2 className="text-xl font-bold text-text dark:text-white">New Clinical Prescription</h2>
+            <p className="text-xs text-text-secondary dark:text-slate-400">
               Author an auditable digital prescription for an authorized patient
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function CreatePrescriptionPage() {
             type="button"
             disabled={isSubmitting}
             onClick={() => handleSubmit(false)}
-            className="btn-secondary text-xs text-text font-semibold"
+            className="btn-secondary text-xs text-text dark:text-white font-semibold"
           >
             <Save className="w-3.5 h-3.5" /> Save Draft
           </button>
@@ -249,14 +249,14 @@ export default function CreatePrescriptionPage() {
             onClick={() => handleSubmit(true)}
             className="btn-primary text-xs shadow-xs"
           >
-            <Send className="w-3.5 h-3.5" /> Finalize & Issue
+            <Send className="w-3.5 h-3.5" /> Finalize &amp; Issue
           </button>
         </div>
       </div>
 
       {/* 1. Patient Selection */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text uppercase tracking-wider text-primary border-b border-border pb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400 border-b border-border dark:border-[#233044] pb-2">
           1. Patient Information
         </h3>
 
@@ -288,19 +288,19 @@ export default function CreatePrescriptionPage() {
         </div>
 
         {selectedPatient && (
-          <div className="p-3 rounded-lg bg-slate-50 border border-border text-xs flex flex-wrap gap-4 text-text-secondary">
-            <span><strong>Name:</strong> {selectedPatient.first_name} {selectedPatient.last_name}</span>
-            <span><strong>DOB:</strong> {selectedPatient.patient_profile?.date_of_birth || 'Not recorded'}</span>
-            <span><strong>Blood Group:</strong> {selectedPatient.patient_profile?.blood_group || 'O+'}</span>
-            <span><strong>Known Allergies:</strong> <span className="text-rose-600 font-medium">{selectedPatient.patient_profile?.allergies || 'None recorded'}</span></span>
+          <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044] text-xs flex flex-wrap gap-4 text-text-secondary dark:text-slate-300">
+            <span><strong className="text-text dark:text-white">Name:</strong> {selectedPatient.first_name} {selectedPatient.last_name}</span>
+            <span><strong className="text-text dark:text-white">DOB:</strong> {selectedPatient.patient_profile?.date_of_birth || 'Not recorded'}</span>
+            <span><strong className="text-text dark:text-white">Blood Group:</strong> {selectedPatient.patient_profile?.blood_group || 'O+'}</span>
+            <span><strong className="text-text dark:text-white">Known Allergies:</strong> <span className="text-rose-600 dark:text-rose-400 font-medium">{selectedPatient.patient_profile?.allergies || 'None recorded'}</span></span>
           </div>
         )}
       </div>
 
       {/* 2. Clinical Evaluation */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text uppercase tracking-wider text-primary border-b border-border pb-2">
-          2. Clinical Information & Diagnosis
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400 border-b border-border dark:border-[#233044] pb-2">
+          2. Clinical Information &amp; Diagnosis
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -327,7 +327,7 @@ export default function CreatePrescriptionPage() {
         </div>
 
         <div>
-          <label className="label">Clinical Notes & Instructions</label>
+          <label className="label">Clinical Notes &amp; Instructions</label>
           <textarea
             rows={2}
             value={clinicalNotes}
@@ -340,8 +340,8 @@ export default function CreatePrescriptionPage() {
 
       {/* 3. Medication Builder */}
       <div className="card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border pb-2">
-          <h3 className="text-sm font-semibold text-text uppercase tracking-wider text-primary">
+        <div className="flex items-center justify-between border-b border-border dark:border-[#233044] pb-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400">
             3. Medication Builder ({items.length} line items)
           </h3>
           <div className="flex items-center gap-2">
@@ -349,9 +349,9 @@ export default function CreatePrescriptionPage() {
               type="button"
               onClick={runInteractionCheck}
               disabled={isCheckingInteractions}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-xs font-semibold transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               {isCheckingInteractions ? 'Checking...' : 'Check Drug Interactions'}
             </button>
             <button
@@ -369,15 +369,15 @@ export default function CreatePrescriptionPage() {
           <div
             className={`p-4 rounded-xl border text-xs space-y-2 ${
               interactionResult.has_interactions
-                ? 'bg-amber-50 border-amber-200 text-amber-900'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                ? 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-800/60 dark:text-amber-200'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800/60 dark:text-emerald-200'
             }`}
           >
             <div className="flex items-center gap-2 font-semibold">
               {interactionResult.has_interactions ? (
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               ) : (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               )}
               <span>
                 {interactionResult.has_interactions
@@ -387,7 +387,7 @@ export default function CreatePrescriptionPage() {
             </div>
 
             {interactionResult.interactions.map((inter, i) => (
-              <div key={i} className="pl-6 border-l-2 border-amber-400 mt-2">
+              <div key={i} className="pl-6 border-l-2 border-amber-400 dark:border-amber-500 mt-2">
                 <p className="font-semibold capitalize">
                   {inter.drug_a} + {inter.drug_b} ({inter.severity} severity)
                 </p>
@@ -395,7 +395,7 @@ export default function CreatePrescriptionPage() {
               </div>
             ))}
 
-            <p className="text-[10px] text-text-light pt-1 italic">
+            <p className="text-[10px] text-text-light dark:text-slate-500 pt-1 italic">
               * {interactionResult.disclaimer}
             </p>
           </div>
@@ -406,10 +406,10 @@ export default function CreatePrescriptionPage() {
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl border border-border bg-slate-50/40 space-y-3 relative"
+              className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/40 dark:bg-[#0F172A]/60 space-y-3 relative"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-text-secondary">
+                <span className="text-xs font-bold text-text-secondary dark:text-slate-400">
                   Line #{idx + 1}
                 </span>
                 <button
@@ -535,32 +535,32 @@ export default function CreatePrescriptionPage() {
         maxWidth="xl"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-50 border border-border">
-            <p className="font-semibold text-text text-sm">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+            <p className="font-semibold text-text dark:text-white text-sm">
               Patient: {selectedPatient ? `${selectedPatient.first_name} ${selectedPatient.last_name}` : 'Not selected'}
             </p>
-            <p className="text-text-secondary mt-0.5">Issue Date: {issueDate}</p>
-            <p className="text-text-secondary mt-0.5">Diagnosis: {diagnosis || 'Not specified'}</p>
+            <p className="text-text-secondary dark:text-slate-400 mt-0.5">Issue Date: {issueDate}</p>
+            <p className="text-text-secondary dark:text-slate-400 mt-0.5">Diagnosis: {diagnosis || 'Not specified'}</p>
           </div>
 
           <table className="w-full text-left">
-            <thead className="border-b border-border text-text-secondary">
+            <thead className="border-b border-border dark:border-[#233044] text-text-secondary dark:text-slate-400">
               <tr>
                 <th className="py-2">Medication</th>
-                <th className="py-2">Dosage & Frequency</th>
+                <th className="py-2">Dosage &amp; Frequency</th>
                 <th className="py-2">Duration</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border dark:divide-[#233044]">
               {items.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="py-2 font-medium text-text">
+                  <td className="py-2 font-medium text-text dark:text-white">
                     {item.medication_name || 'Unspecified'} ({item.strength})
                   </td>
-                  <td className="py-2 text-text-secondary">
+                  <td className="py-2 text-text-secondary dark:text-slate-400">
                     {item.dosage} — {item.frequency}
                   </td>
-                  <td className="py-2 text-text-secondary">
+                  <td className="py-2 text-text-secondary dark:text-slate-400">
                     {item.duration_days} days ({item.quantity})
                   </td>
                 </tr>
@@ -568,7 +568,7 @@ export default function CreatePrescriptionPage() {
             </tbody>
           </table>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-[#233044]">
             <button onClick={() => setShowPreview(false)} className="btn-secondary text-xs">
               Close Preview
             </button>
@@ -579,7 +579,7 @@ export default function CreatePrescriptionPage() {
               }}
               className="btn-primary text-xs"
             >
-              Confirm & Issue Prescription
+              Confirm &amp; Issue Prescription
             </button>
           </div>
         </div>
