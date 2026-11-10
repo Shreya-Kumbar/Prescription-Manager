@@ -75,7 +75,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Start the backend — DB tables + demo accounts are created automatically
-python run.py
+⭐ python run.py
 ```
 
 The backend will start at **http://localhost:8000**.  
@@ -92,7 +92,7 @@ cd arogyanova/frontend
 npm install
 
 # Start Vite development server
-npm run dev
+⭐ npm run dev
 ```
 
 Visit:

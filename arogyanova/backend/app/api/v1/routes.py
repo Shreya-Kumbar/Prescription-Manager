@@ -48,7 +48,11 @@ async def list_patients(
 
     q = (
         select(UserModel)
-        .options(selectinload(UserModel.patient_profile))
+        .options(
+            selectinload(UserModel.patient_profile),
+            selectinload(UserModel.doctor_profile),
+            selectinload(UserModel.pharmacist_profile),
+        )
         .where(UserModel.role == "patient", UserModel.is_active == True)
         .order_by(UserModel.last_name)
     )
@@ -81,6 +85,7 @@ async def get_patient(
         .options(
             selectinload(UserModel.patient_profile),
             selectinload(UserModel.doctor_profile),
+            selectinload(UserModel.pharmacist_profile),
         )
         .where(UserModel.id == patient_id)
     )
