@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",")]
 
+    # Email (SMTP). Leave SMTP_PASSWORD empty to disable sending.
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    MAIL_FROM: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 60
 

@@ -8,10 +8,13 @@ OOP Principles:
 """
 from __future__ import annotations
 
+import asyncio
+import smtplib
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from email.message import EmailMessage
 from enum import Enum
 from typing import Optional
 
@@ -116,21 +119,42 @@ class EmailNotificationChannel(NotificationChannel):
     """
 
     def __init__(self, smtp_host: Optional[str] = None, smtp_port: int = 587,
-                 smtp_user: Optional[str] = None, smtp_password: Optional[str] = None) -> None:
+                 smtp_user: Optional[str] = None, smtp_password: Optional[str] = None,
+                 mail_from: Optional[str] = None) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
         self._smtp_user = smtp_user
         self._smtp_password = smtp_password
+        self._mail_from = mail_from or smtp_user
 
     async def send(self, notification: Notification) -> bool:
-        if not self.is_available():
-            return False
-        # Email sending implementation would go here with an SMTP library
-        # Returning False until SMTP is configured
+        # Notification objects carry a user id, not an address; callers that know
+        # the address use send_to_address() directly.
         return False
 
+    async def send_to_address(self, to_address: str, subject: str, body: str) -> bool:
+        """Send a plain-text email over SMTP with STARTTLS. Returns True on success."""
+        if not self.is_available():
+            return False
+        msg = EmailMessage()
+        msg["From"] = self._mail_from
+        msg["To"] = to_address
+        msg["Subject"] = subject
+        msg.set_content(body)
+        try:
+            await asyncio.to_thread(self._deliver, msg)
+            return True
+        except (smtplib.SMTPException, OSError):
+            return False
+
+    def _deliver(self, msg: EmailMessage) -> None:
+        with smtplib.SMTP(self._smtp_host, self._smtp_port, timeout=20) as server:
+            server.starttls()
+            server.login(self._smtp_user, self._smtp_password)
+            server.send_message(msg)
+
     def is_available(self) -> bool:
-        return bool(self._smtp_host and self._smtp_user)
+        return bool(self._smtp_host and self._smtp_user and self._smtp_password)
 
     @property
     def channel_name(self) -> str:

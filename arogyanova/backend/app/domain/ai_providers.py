@@ -291,6 +291,32 @@ class LocalInteractionChecker(InteractionChecker):
             "severity": InteractionSeverity.MAJOR,
             "description": "Increased risk of serotonin syndrome.",
         },
+        # --- Pairs drawn from the seeded medication catalogue ---
+        {
+            "drugs": {"clopidogrel", "omeprazole"},
+            "severity": InteractionSeverity.MAJOR,
+            "description": "Omeprazole inhibits CYP2C19, reducing activation of clopidogrel and its protection against clots.",
+        },
+        {
+            "drugs": {"clopidogrel", "ibuprofen"},
+            "severity": InteractionSeverity.MAJOR,
+            "description": "An NSAID plus an antiplatelet agent significantly increases the risk of gastrointestinal bleeding.",
+        },
+        {
+            "drugs": {"lisinopril", "ibuprofen"},
+            "severity": InteractionSeverity.MODERATE,
+            "description": "NSAIDs can blunt the blood-pressure-lowering effect of ACE inhibitors and strain kidney function.",
+        },
+        {
+            "drugs": {"metoprolol", "salbutamol"},
+            "severity": InteractionSeverity.MODERATE,
+            "description": "Beta-blockers can oppose the bronchodilating effect of salbutamol.",
+        },
+        {
+            "drugs": {"clopidogrel", "pantoprazole"},
+            "severity": InteractionSeverity.MINOR,
+            "description": "Pantoprazole may slightly reduce clopidogrel's antiplatelet effect; preferred over omeprazole if a PPI is needed.",
+        },
     ]
 
     async def check(self, medicine_names: list[str]) -> InteractionCheckResult:

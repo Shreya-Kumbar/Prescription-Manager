@@ -9,7 +9,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import AliasChoices, BaseModel, EmailStr, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +58,21 @@ class LoginRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    # Only returned in development, where no email server is configured.
+    dev_reset_token: Optional[str] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=10)
     new_password: str = Field(..., min_length=8)
 
 
@@ -312,7 +327,10 @@ class AdminCreateUser(RegisterRequest):
 # ---------------------------------------------------------------------------
 
 class InteractionCheckRequest(BaseModel):
-    medicine_names: List[str] = Field(..., min_length=2)
+    # Accept both "medicine_names" and "medicines" (the key the frontend sends)
+    medicine_names: List[str] = Field(
+        ..., min_length=2, validation_alias=AliasChoices("medicine_names", "medicines")
+    )
 
 
 class InteractionCheckResponse(BaseModel):

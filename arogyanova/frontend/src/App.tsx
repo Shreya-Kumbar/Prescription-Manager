@@ -6,6 +6,8 @@ import LoadingScreen from './components/ui/LoadingScreen'
 // Pages
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import DashboardPage from './pages/DashboardPage'
 import PrescriptionsPage from './pages/PrescriptionsPage'
 import CreatePrescriptionPage from './pages/CreatePrescriptionPage'
@@ -40,6 +42,8 @@ export default function App() {
       {/* Public routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

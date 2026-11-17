@@ -13,24 +13,32 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+import hashlib
+import secrets
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.domain.notifications import EmailNotificationChannel
 from app.db.database import get_db
 from app.models.models import (
-    AuditLogModel, DoctorProfileModel, PatientProfileModel,
+    AuditLogModel, DoctorProfileModel, PasswordResetTokenModel, PatientProfileModel,
     PharmacistProfileModel, RefreshTokenModel, UserModel,
 )
 from app.schemas.schemas import (
-    ChangePasswordRequest, LoginRequest, MessageResponse,
-    RegisterRequest, UserDetailResponse,
+    ChangePasswordRequest, ForgotPasswordRequest, ForgotPasswordResponse, LoginRequest,
+    MessageResponse, RegisterRequest, ResetPasswordRequest, UserDetailResponse,
 )
 from app.security.dependencies import AnyAuthenticatedUser, get_current_user
 from app.security.passwords import (
     create_access_token, create_refresh_token, hash_password,
     hash_refresh_token, validate_password_strength, verify_password,
 )
+
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -276,3 +284,119 @@ async def change_password(
     ))
     await db.commit()
     return MessageResponse(message="Password changed successfully.")
+
+
+
+# ---------------------------------------------------------------------------
+# Forgot / reset password
+# ---------------------------------------------------------------------------
+
+RESET_TOKEN_TTL_MINUTES = 30
+_FORGOT_MESSAGE = "If an account exists for that email, a password reset link has been sent."
+
+
+def _hash_reset_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ForgotPasswordResponse:
+    """
+    Start a password reset. Always returns the same message so attackers cannot
+    discover which emails are registered (prevents user enumeration).
+    """
+    result = await db.execute(select(UserModel).where(func.lower(UserModel.email) == body.email.lower()))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return ForgotPasswordResponse(message=_FORGOT_MESSAGE)
+
+    # Invalidate any earlier unused tokens for this user
+    await db.execute(
+        update(PasswordResetTokenModel)
+        .where(PasswordResetTokenModel.user_id == user.id, PasswordResetTokenModel.used == False)  # noqa: E712
+        .values(used=True)
+    )
+
+    raw_token = secrets.token_urlsafe(32)
+    db.add(PasswordResetTokenModel(
+        user_id=user.id,
+        token_hash=_hash_reset_token(raw_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_TTL_MINUTES),
+    ))
+    db.add(AuditLogModel(
+        actor_id=user.id,
+        action="auth.password_reset_requested",
+        resource_type="user",
+        resource_id=str(user.id),
+    ))
+    await db.commit()
+
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+    mailer = EmailNotificationChannel(
+        smtp_host=settings.SMTP_HOST, smtp_port=settings.SMTP_PORT,
+        smtp_user=settings.SMTP_USER, smtp_password=settings.SMTP_PASSWORD,
+        mail_from=settings.MAIL_FROM,
+    )
+    emailed = await mailer.send_to_address(
+        user.email,
+        "Reset your ArogyaNova password",
+        f"Hi {user.first_name},\n\n"
+        f"We received a request to reset your ArogyaNova password. Open this link to choose a new one:\n\n"
+        f"{reset_url}\n\n"
+        f"The link works once and expires in {RESET_TOKEN_TTL_MINUTES} minutes. "
+        f"If you didn't ask for this, you can ignore this email.\n\n— ArogyaNova",
+    )
+    if not emailed:
+        logger.warning("Password reset email not sent (SMTP not configured or failed)", user_id=str(user.id))
+
+    # If the email could not be sent and we are in development, hand the token back so
+    # the GUI can show the link. In production it is never returned.
+    dev_token = raw_token if (not emailed and settings.ENVIRONMENT == "development") else None
+    return ForgotPasswordResponse(message=_FORGOT_MESSAGE, dev_reset_token=dev_token)
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MessageResponse:
+    """Complete a password reset using a one-time token."""
+    invalid = HTTPException(status_code=400, detail="This reset link is invalid or has expired. Please request a new one.")
+
+    result = await db.execute(
+        select(PasswordResetTokenModel).where(PasswordResetTokenModel.token_hash == _hash_reset_token(body.token))
+    )
+    token = result.scalar_one_or_none()
+    if token is None or token.used:
+        raise invalid
+    expires_at = token.expires_at
+    if expires_at.tzinfo is None:  # SQLite returns naive datetimes
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        raise invalid
+
+    errors = validate_password_strength(body.new_password)
+    if errors:
+        raise HTTPException(status_code=422, detail="; ".join(errors))
+
+    user = await db.get(UserModel, token.user_id)
+    if user is None or not user.is_active:
+        raise invalid
+
+    user.hashed_password = hash_password(body.new_password)
+    token.used = True
+    # Log out every existing session
+    await db.execute(
+        update(RefreshTokenModel).where(RefreshTokenModel.user_id == user.id).values(revoked=True)
+    )
+    db.add(AuditLogModel(
+        actor_id=user.id,
+        action="auth.password_reset_completed",
+        resource_type="user",
+        resource_id=str(user.id),
+    ))
+    await db.commit()
+    return MessageResponse(message="Your password has been reset. You can now sign in.")

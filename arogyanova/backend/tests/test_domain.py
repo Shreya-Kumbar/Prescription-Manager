@@ -275,7 +275,7 @@ class TestNotificationPolymorphism:
         assert service.available_channels() == []
 
     def test_notification_service_with_mixed_channels(self):
-        email = EmailNotificationChannel(smtp_host="smtp.test", smtp_user="test@test.com")
+        email = EmailNotificationChannel(smtp_host="smtp.test", smtp_user="test@test.com", smtp_password="app-password")
         sms = SMSNotificationChannel()
         service = NotificationService([email, sms])
         channels = service.available_channels()
