@@ -24,10 +24,23 @@ export default function MedicationsPage() {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Matches the backend rule: pharmacists and administrators maintain the catalogue.
+  const canManage = user?.role === 'administrator' || user?.role === 'pharmacist';
+
+  const toggleMedication = async (m: any) => {
+    try {
+      await api.patch(`/medications/${m.id}`, { is_active: m.is_active === false });
+      toast.success(m.is_active === false ? `${m.generic_name} restored to the catalogue` : `${m.generic_name} retired — doctors can no longer prescribe it`);
+      fetchMedications();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not update the medicine.');
+    }
+  };
+
   const fetchMedications = async () => {
     try {
       setIsLoading(true);
-      const res = await api.get('/medications');
+      const res = await api.get('/medications', { params: { per_page: 200, active_only: !canManage } });
       setMedications(res.data || []);
     } catch {
       toast.error('Failed to load medication catalogue.');
@@ -87,7 +100,6 @@ export default function MedicationsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const canManage = user?.role === 'administrator' || user?.role === 'pharmacist' || user?.role === 'doctor';
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -150,7 +162,7 @@ export default function MedicationsPage() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
+              <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#24352C]">
                 <tr>
                   <th className="py-3 px-4">Generic Name</th>
                   <th className="py-3 px-4">Brand Name</th>
@@ -160,11 +172,11 @@ export default function MedicationsPage() {
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-[#233044]">
+              <tbody className="divide-y divide-border dark:divide-[#24352C]">
                 {filtered.map((m) => (
-                  <tr key={m.id} className="hover:bg-teal-50/20 dark:hover:bg-teal-950/20 transition-colors">
+                  <tr key={m.id} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-text dark:text-white flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400 flex items-center justify-center shrink-0">
                         <Pill className="w-3.5 h-3.5" />
                       </div>
                       {m.generic_name}
@@ -187,9 +199,25 @@ export default function MedicationsPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                        <Check className="w-3 h-3" /> Available
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {m.is_active === false ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/[0.05] px-2 py-0.5 rounded-full">
+                            Retired
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                            <Check className="w-3 h-3" /> Available
+                          </span>
+                        )}
+                        {canManage && (
+                          <button
+                            onClick={() => toggleMedication(m)}
+                            className="text-[11px] font-semibold text-primary hover:underline"
+                          >
+                            {m.is_active === false ? 'Restore' : 'Retire'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -287,7 +315,7 @@ export default function MedicationsPage() {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border dark:border-[#233044]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border dark:border-[#24352C]">
             <button
               type="button"
               onClick={() => setShowAddModal(false)}

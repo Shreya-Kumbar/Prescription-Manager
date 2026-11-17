@@ -30,8 +30,11 @@ api.interceptors.response.use(
 
       if (status === 401) {
         sessionStorage.removeItem('arogyanova_token');
-        // Session expired — redirect to login
-        if (window.location.pathname !== '/login') {
+        // Session expired — send the user to login, but never from the public pages
+        // (sign-up, forgot/reset password): a logged-out visitor is expected there,
+        // and redirecting would break the emailed reset link.
+        const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
+        if (!PUBLIC_PATHS.includes(window.location.pathname)) {
           window.location.href = '/login';
         }
       } else if (status === 403) {

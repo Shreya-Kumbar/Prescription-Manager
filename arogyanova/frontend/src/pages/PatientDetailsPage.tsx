@@ -113,7 +113,7 @@ export default function PatientDetailsPage() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/patients')}
-          className="flex items-center gap-1.5 text-xs text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white p-2 rounded-lg border border-border dark:border-[#233044] bg-white dark:bg-[#131C31] transition-colors"
+          className="flex items-center gap-1.5 text-xs text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white p-2 rounded-lg border border-border dark:border-[#24352C] bg-white dark:bg-[#16201B] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Directory
         </button>
@@ -129,10 +129,10 @@ export default function PatientDetailsPage() {
       </div>
 
       {/* Patient Demographic Card */}
-      <div className="card p-6 border border-border dark:border-[#233044] space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border dark:border-[#233044] pb-6">
+      <div className="card p-6 border border-border dark:border-[#24352C] space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border dark:border-[#24352C] pb-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400 flex items-center justify-center font-bold text-xl">
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center font-bold text-xl">
               {patient.first_name[0]}
               {patient.last_name[0]}
             </div>
@@ -152,7 +152,8 @@ export default function PatientDetailsPage() {
             </div>
           </div>
 
-          <div>
+          {/* Only the patient themself (via Settings) or an administrator may change these details. */}
+          {user?.role === 'administrator' && <div>
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
@@ -168,34 +169,34 @@ export default function PatientDetailsPage() {
                 Cancel
               </button>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Profile Details (View or Edit) */}
         {!isEditing ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Date of Birth</span>
               <span className="font-semibold text-text dark:text-white mt-0.5 block">
                 {patient.patient_profile?.date_of_birth || 'Not recorded'}
               </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Blood Group</span>
               <span className="font-semibold text-rose-600 dark:text-rose-400 mt-0.5 block">
                 {patient.patient_profile?.blood_group || 'O+'}
               </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Contact Number</span>
               <span className="font-semibold text-text dark:text-white mt-0.5 block">
                 {patient.patient_profile?.phone || 'Not recorded'}
               </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Emergency Contact</span>
               <span className="font-semibold text-text dark:text-white mt-0.5 block">
                 {patient.patient_profile?.emergency_contact || 'None'}
@@ -281,7 +282,7 @@ export default function PatientDetailsPage() {
 
       {/* Prescription History for this Patient */}
       <div className="card overflow-hidden">
-        <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
+        <div className="p-5 border-b border-border dark:border-[#24352C] flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-text dark:text-white text-sm">Clinical Prescription History</h3>
             <p className="text-xs text-text-secondary dark:text-slate-400">
@@ -293,7 +294,7 @@ export default function PatientDetailsPage() {
         {prescriptions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
+              <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#24352C]">
                 <tr>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Status</th>
@@ -302,9 +303,9 @@ export default function PatientDetailsPage() {
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-[#233044]">
+              <tbody className="divide-y divide-border dark:divide-[#24352C]">
                 {prescriptions.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/40 dark:hover:bg-[#162238] transition-colors">
+                  <tr key={p.id} className="hover:bg-slate-50/40 dark:hover:bg-[#1C2922] transition-colors">
                     <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
                     <td className="py-3 px-4">
                       <Badge status={p.status} size="sm" />
@@ -318,7 +319,7 @@ export default function PatientDetailsPage() {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => navigate(`/prescriptions/${p.id}`)}
-                        className="text-primary dark:text-teal-400 hover:underline font-semibold"
+                        className="text-primary dark:text-emerald-400 hover:underline font-semibold"
                       >
                         View Details
                       </button>

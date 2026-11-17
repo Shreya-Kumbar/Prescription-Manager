@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, Stethoscope, User, Pill } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { CalendarCheck, Eye, EyeOff, Info, ShieldCheck, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from '../components/ui/ThemeToggle';
+import { authService } from '../services/authService';
+
+const DEMO_ACCOUNTS = [
+  { label: 'Doctor', email: 'dr.sharma@arogyanova.dev', password: 'Demo@Doctor123' },
+  { label: 'Patient', email: 'patient.ravi@arogyanova.dev', password: 'Demo@Patient123' },
+  { label: 'Pharmacist', email: 'pharma.anil@arogyanova.dev', password: 'Demo@Pharma123' },
+  { label: 'Admin', email: 'admin@arogyanova.dev', password: 'Demo@Admin123' },
+];
+
+const FEATURES = [
+  { icon: Sparkles, label: 'AI interaction check' },
+  { icon: ShieldCheck, label: 'RBAC security' },
+  { icon: CalendarCheck, label: 'Dose tracking' },
+];
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,168 +25,234 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
+  const location = useLocation();
+  const [mode, setMode] = useState<'signin' | 'signup'>(location.pathname === '/register' ? 'signup' : 'signin');
+  const [reg, setReg] = useState({ first_name: '', last_name: '', email: '', password: '', date_of_birth: '', phone: '' });
+  const setR = (k: keyof typeof reg) => (e: React.ChangeEvent<HTMLInputElement>) => setReg({ ...reg, [k]: e.target.value });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const switchMode = (m: 'signin' | 'signup') => {
+    setMode(m);
+    window.history.replaceState(null, '', m === 'signup' ? '/register' : '/login');
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please enter both email and password.');
-      return;
-    }
-
     try {
       setIsLoading(true);
-      await login(email, password);
-      toast.success('Welcome back to ArogyaNova!');
-      navigate('/dashboard');
+      await authService.register({
+        ...reg,
+        role: 'patient', // public sign-up is for patients only
+        date_of_birth: reg.date_of_birth || undefined,
+      } as any);
+      toast.success('Account created. Sign in to continue.');
+      setEmail(reg.email);
+      setPassword('');
+      setReg({ first_name: '', last_name: '', email: '', password: '', date_of_birth: '', phone: '' });
+      switchMode('signin');
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Invalid email or password.';
-      toast.error(msg);
+      const d = err.response?.data?.detail;
+      toast.error(typeof d === 'string' ? d : 'Could not create the account. Check your details.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error('Enter your email and password.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await login(email, password);
+      toast.success('Welcome back to ArogyaNova');
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Invalid email or password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fillDemo = (a: (typeof DEMO_ACCOUNTS)[number]) => {
+    setEmail(a.email);
+    setPassword(a.password);
+    setPicked(a.label);
   };
 
   return (
-    <div className="min-h-screen bg-background dark:bg-[#0B132B] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative transition-colors duration-200">
-      {/* Theme Toggle Button */}
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
+    <div className="login-bg relative min-h-screen lg:h-screen overflow-x-hidden lg:overflow-hidden text-white">
+      {/* soft glows + faint grid */}
+      <div className="login-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
+      <div className="login-glow login-glow-1" aria-hidden="true" />
+      <div className="login-glow login-glow-2" aria-hidden="true" />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="flex justify-center items-center gap-3">
-          <img src="/logo.svg" alt="ArogyaNova Logo" className="w-10 h-10" />
-          <span className="text-2xl font-bold text-text dark:text-white tracking-tight">ArogyaNova</span>
+      <div className="relative z-10 min-h-screen lg:h-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-14 pt-10 lg:pt-12 pb-6 flex flex-col">
+        {/* Brand */}
+        <div className="flex items-center gap-3 login-rise">
+          <img src="/logo.svg" alt="ArogyaNova" className="w-9 h-9 float" />
+          <span className="text-2xl font-bold tracking-tight">ArogyaNova</span>
         </div>
-        <p className="mt-2 text-xs font-medium text-text-secondary dark:text-slate-400">
-          Healthcare, reimagined through innovation
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
-        <div className="card p-8 shadow-card-lg">
-          <h2 className="text-xl font-bold text-text dark:text-white mb-6">Sign in to your account</h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Email Address</label>
-              <div className="relative">
-                <Mail className="w-5 h-5 absolute left-3 top-2.5 text-text-light dark:text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="doctor@arogyanova.dev"
-                  className="input pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="label">Password</label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-2.5 text-text-light dark:text-slate-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="input pl-10 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-text-light dark:text-slate-400 hover:text-text dark:hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full justify-center py-2.5 mt-2"
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Quick Demo Credentials Panel */}
-          <div className="mt-6 pt-6 border-t border-border dark:border-[#233044]">
-            <p className="text-xs font-semibold text-text-secondary dark:text-slate-400 uppercase tracking-wider mb-3">
-              One-Click Demo Roles (For Evaluation)
+        <div className="flex-1 min-h-0 grid lg:grid-cols-2 gap-10 items-center py-6">
+          {/* Hero (left) */}
+          <div className="hidden lg:block">
+            <span className="login-rise inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 border border-white/15" style={{ animationDelay: '0.05s' }}>
+              <span className="dot-live w-2 h-2 rounded-full bg-emerald-300" /> AI-powered prescription safety
+            </span>
+            <h1 className="login-rise mt-5 text-5xl xl:text-6xl font-extrabold leading-[1.05] tracking-tight" style={{ animationDelay: '0.12s' }}>
+              Prescribe, track<br />and heal <span className="text-[#A8DCC0]">safely.</span>
+            </h1>
+            <p className="login-rise mt-5 max-w-md text-base xl:text-lg text-emerald-50/75 leading-relaxed" style={{ animationDelay: '0.2s' }}>
+              Digital prescriptions with drug-interaction warnings, automatic dose schedules and adherence
+              tracking for doctors, patients and pharmacists.
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoFill('dr.sharma@arogyanova.dev', 'Demo@Doctor123')}
-                className="flex items-center gap-2 p-2 rounded-lg border border-border dark:border-[#233044] hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:border-teal-200 dark:hover:border-teal-800/60 text-left transition-colors"
-              >
-                <Stethoscope className="w-4 h-4 text-primary shrink-0" />
-                <div className="text-[11px] overflow-hidden">
-                  <p className="font-semibold text-text dark:text-slate-100 truncate">Doctor</p>
-                  <p className="text-text-secondary dark:text-slate-400 truncate">Dr. Priya Sharma</p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              {FEATURES.map(({ icon: Icon, label }, i) => (
+                <div
+                  key={label}
+                  className="login-rise login-tile w-40 rounded-2xl border border-white/15 bg-white/[0.07] backdrop-blur px-4 py-4"
+                  style={{ animationDelay: `${0.28 + i * 0.08}s` }}
+                >
+                  <Icon className="w-6 h-6 text-[#A8DCC0]" />
+                  <p className="mt-3 text-sm font-semibold">{label}</p>
                 </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoFill('patient.ravi@arogyanova.dev', 'Demo@Patient123')}
-                className="flex items-center gap-2 p-2 rounded-lg border border-border dark:border-[#233044] hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:border-blue-200 dark:hover:border-blue-800/60 text-left transition-colors"
-              >
-                <User className="w-4 h-4 text-secondary shrink-0" />
-                <div className="text-[11px] overflow-hidden">
-                  <p className="font-semibold text-text dark:text-slate-100 truncate">Patient</p>
-                  <p className="text-text-secondary dark:text-slate-400 truncate">Ravi Verma</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoFill('pharma.anil@arogyanova.dev', 'Demo@Pharma123')}
-                className="flex items-center gap-2 p-2 rounded-lg border border-border dark:border-[#233044] hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:border-purple-200 dark:hover:border-purple-800/60 text-left transition-colors"
-              >
-                <Pill className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-                <div className="text-[11px] overflow-hidden">
-                  <p className="font-semibold text-text dark:text-slate-100 truncate">Pharmacist</p>
-                  <p className="text-text-secondary dark:text-slate-400 truncate">Anil Menon</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoFill('admin@arogyanova.dev', 'Demo@Admin123')}
-                className="flex items-center gap-2 p-2 rounded-lg border border-border dark:border-[#233044] hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:border-indigo-200 dark:hover:border-indigo-800/60 text-left transition-colors"
-              >
-                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <div className="text-[11px] overflow-hidden">
-                  <p className="font-semibold text-text dark:text-slate-100 truncate">Admin</p>
-                  <p className="text-text-secondary dark:text-slate-400 truncate">Arjun Kumar</p>
-                </div>
-              </button>
+              ))}
             </div>
           </div>
 
-          <div className="mt-6 text-center text-xs text-text-secondary dark:text-slate-400">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-primary hover:underline">
-              Create an account
-            </Link>
+          {/* Sign-in card (right) */}
+          <div className="login-rise w-full max-w-md lg:justify-self-end" style={{ animationDelay: '0.15s' }}>
+            <div className="login-card rounded-[28px] p-7 sm:p-8 text-[#13261D]">
+              <div key={mode} className="card-swap">
+                {mode === 'signin' ? (
+                  <>
+              <h2 className="text-3xl font-extrabold tracking-tight">Welcome back!</h2>
+              <p className="mt-1 text-sm text-[#4E6358]">Sign in to your ArogyaNova account</p>
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5" htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setPicked(null); }}
+                    placeholder="you@hospital.com"
+                    className="login-input"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-semibold" htmlFor="password">Password</label>
+                    <Link to="/forgot-password" className="text-xs font-semibold text-[#2F7D57] hover:underline">Forgot password?</Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setPicked(null); }}
+                      className="login-input pr-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7F74] hover:text-[#13261D]"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" disabled={isLoading} className="login-btn w-full">
+                  {isLoading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </form>
+
+              <p className="mt-4 text-center text-sm text-[#4E6358]">
+                No account? <button type="button" onClick={() => switchMode('signup')} className="font-semibold text-[#2F7D57] hover:underline">Create one</button>
+              </p>
+
+              <div className="mt-5 rounded-2xl bg-white/60 border border-white/70 p-4">
+                <p className="flex items-center gap-2 text-sm font-medium text-[#2F7D57]">
+                  <Info className="w-4 h-4" /> Demo accounts (click to fill)
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {DEMO_ACCOUNTS.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => fillDemo(a)}
+                      className={`demo-chip ${picked === a.label ? 'demo-chip-on' : ''}`}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+                  </>
+                ) : (
+                  <>
+              <h2 className="text-3xl font-extrabold tracking-tight">Create account</h2>
+              <p className="mt-1 text-sm text-[#4E6358]">Patient sign-up. Staff accounts are created by your admin.</p>
+
+              <form onSubmit={handleRegister} className="mt-5 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5" htmlFor="first_name">First name</label>
+                    <input id="first_name" required value={reg.first_name} onChange={setR('first_name')} className="login-input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5" htmlFor="last_name">Last name</label>
+                    <input id="last_name" required value={reg.last_name} onChange={setR('last_name')} className="login-input" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5" htmlFor="reg_email">Email</label>
+                  <input id="reg_email" type="email" required value={reg.email} onChange={setR('email')} placeholder="you@example.com" className="login-input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5" htmlFor="reg_password">Password</label>
+                  <div className="relative">
+                    <input id="reg_password" type={showPassword ? 'text' : 'password'} required minLength={8} value={reg.password} onChange={setR('password')} placeholder="8+ chars, upper, lower, number" className="login-input pr-11" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7F74] hover:text-[#13261D]">
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5" htmlFor="dob">Date of birth</label>
+                    <input id="dob" type="date" value={reg.date_of_birth} onChange={setR('date_of_birth')} className="login-input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1.5" htmlFor="phone">Phone</label>
+                    <input id="phone" type="tel" value={reg.phone} onChange={setR('phone')} placeholder="+91 98765 43210" className="login-input" />
+                  </div>
+                </div>
+                <button type="submit" disabled={isLoading} className="login-btn w-full">
+                  {isLoading ? 'Creating account…' : 'Create account'}
+                </button>
+              </form>
+
+              <p className="mt-5 text-center text-sm text-[#4E6358]">
+                Already have an account? <button type="button" onClick={() => switchMode('signin')} className="font-semibold text-[#2F7D57] hover:underline">Sign in</button>
+              </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+
+        <p className="text-sm text-emerald-50/60 login-rise" style={{ animationDelay: '0.5s' }}>
+          Object-Oriented Methodologies Project · 2026
+        </p>
       </div>
     </div>
   );

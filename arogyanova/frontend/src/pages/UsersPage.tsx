@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { UserCog, Search, Filter, ShieldCheck, Check, X, ShieldAlert } from 'lucide-react';
+import { UserCog, Search, Filter, ShieldCheck, Check, X, ShieldAlert, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { User } from '../types';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import AddStaffModal from '../components/ui/AddStaffModal';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -51,12 +53,18 @@ export default function UsersPage() {
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold text-text dark:text-white">User Account Administration</h2>
-        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-          Manage system credentials, professional role assignments, and active account status
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-text dark:text-white">User Account Administration</h2>
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
+            Create staff accounts, manage roles and activate or deactivate access
+          </p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="btn-primary text-sm self-start sm:self-auto">
+          <UserPlus className="w-4 h-4" /> Add staff
+        </button>
       </div>
+      <AddStaffModal isOpen={showAdd} onClose={() => setShowAdd(false)} onCreated={fetchUsers} />
 
       {/* Filter and Search Bar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
@@ -97,7 +105,7 @@ export default function UsersPage() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
+              <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#24352C]">
                 <tr>
                   <th className="py-3 px-4">User</th>
                   <th className="py-3 px-4">Role</th>
@@ -107,12 +115,12 @@ export default function UsersPage() {
                   <th className="py-3 px-4 text-right">Account Control</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-[#233044]">
+              <tbody className="divide-y divide-border dark:divide-[#24352C]">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
+                  <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-[#1C2922] transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400 flex items-center justify-center font-bold text-xs">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
                           {u.first_name[0]}
                           {u.last_name[0]}
                         </div>

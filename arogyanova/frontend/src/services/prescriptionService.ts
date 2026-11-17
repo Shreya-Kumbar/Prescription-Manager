@@ -30,6 +30,7 @@ export interface PrescriptionFilters {
   page?: number;
   per_page?: number;
   status?: string;
+  pharmacy_status?: string;
   date_from?: string;
   date_to?: string;
   search?: string;

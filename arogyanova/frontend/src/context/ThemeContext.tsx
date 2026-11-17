@@ -32,6 +32,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
+  // Always print in light mode (dark backgrounds waste ink and fade text), then restore.
+  useEffect(() => {
+    const root = document.documentElement;
+    const before = () => root.classList.remove('dark');
+    const after = () => { if (theme === 'dark') root.classList.add('dark'); };
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, [theme]);
+
   return (
     <ThemeContext.Provider value={{ theme, isDark: theme === 'dark', toggleTheme }}>
       {children}

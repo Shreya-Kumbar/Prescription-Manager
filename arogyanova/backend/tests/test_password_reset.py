@@ -19,6 +19,14 @@ OLD_PW = "OldPass123"
 NEW_PW = "NewPass456"
 
 
+@pytest.fixture(autouse=True)
+def no_real_email(monkeypatch):
+    """Tests must never send real email, whatever is in the developer's .env."""
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+    monkeypatch.setattr(settings, "ENVIRONMENT", "development")
+
+
 @pytest.fixture
 async def db():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)

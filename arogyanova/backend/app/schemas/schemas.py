@@ -228,13 +228,27 @@ class PrescriptionSummary(BaseModel):
     patient: Optional[UserResponse] = None
     doctor: Optional[UserResponse] = None
     item_count: int = 0
+    pharmacy_status: str = "pending"
 
     model_config = {"from_attributes": True}
+
+
+class PharmacyActionResponse(BaseModel):
+    action: str
+    notes: Optional[str] = None
+    pharmacist_name: str
+    created_at: datetime
+
+
+class PharmacyActionRequest(BaseModel):
+    action: str = Field(..., pattern="^(verify|flag|dispense)$")
+    notes: Optional[str] = Field(None, max_length=1000)
 
 
 class PrescriptionDetail(PrescriptionSummary):
     items: List[PrescriptionItemResponse] = Field(default_factory=list)
     clinical_notes: Optional[str] = None
+    pharmacy_history: List[PharmacyActionResponse] = Field(default_factory=list)
 
 
 class PrescriptionListResponse(PaginatedResponse):

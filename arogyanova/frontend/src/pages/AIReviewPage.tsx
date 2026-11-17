@@ -107,7 +107,7 @@ export default function AIReviewPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400">
+          <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400">
             <Sparkles className="w-5 h-5" />
           </span>
           <h2 className="text-xl font-bold text-text dark:text-white">AI Clinical Review &amp; Safety</h2>
@@ -118,12 +118,12 @@ export default function AIReviewPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-border dark:border-[#233044] text-xs font-medium">
+      <div className="flex border-b border-border dark:border-[#24352C] text-xs font-medium">
         <button
           onClick={() => setActiveTab('interactions')}
           className={`py-3 px-5 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'interactions'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
+              ? 'border-primary text-primary dark:text-emerald-400 font-bold'
               : 'border-transparent text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white'
           }`}
         >
@@ -133,7 +133,7 @@ export default function AIReviewPage() {
           onClick={() => setActiveTab('ocr')}
           className={`py-3 px-5 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'ocr'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
+              ? 'border-primary text-primary dark:text-emerald-400 font-bold'
               : 'border-transparent text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white'
           }`}
         >
@@ -176,7 +176,7 @@ export default function AIReviewPage() {
               {medicinesToCheck.map((med) => (
                 <span
                   key={med}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/50 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/40"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40"
                 >
                   {med}
                   <button
@@ -189,7 +189,7 @@ export default function AIReviewPage() {
               ))}
             </div>
 
-            <div className="pt-3 border-t border-border dark:border-[#233044] flex justify-end">
+            <div className="pt-3 border-t border-border dark:border-[#24352C] flex justify-end">
               <button
                 onClick={handleCheckInteractions}
                 disabled={interactionLoading || medicinesToCheck.length < 2}
@@ -203,7 +203,7 @@ export default function AIReviewPage() {
           {/* Results Display */}
           {interactionResult && (
             <div className="card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-border dark:border-[#233044] pb-4">
+              <div className="flex items-center justify-between border-b border-border dark:border-[#24352C] pb-4">
                 <div className="flex items-center gap-2">
                   {interactionResult.has_interactions ? (
                     <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
@@ -233,7 +233,7 @@ export default function AIReviewPage() {
                   {interactionResult.interactions.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/70 dark:bg-[#0F172A]/70 text-xs space-y-1.5"
+                      className="p-4 rounded-xl border border-border dark:border-[#24352C] bg-slate-50/70 dark:bg-[#121B17]/70 text-xs space-y-1.5"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-text dark:text-white text-sm capitalize">
@@ -245,7 +245,7 @@ export default function AIReviewPage() {
                               ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                               : item.severity === 'major'
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                           }`}
                         >
                           {item.severity} Severity
@@ -258,7 +258,7 @@ export default function AIReviewPage() {
                 </div>
               )}
 
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044] text-[11px] text-text-secondary dark:text-slate-400 italic">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C] text-[11px] text-text-secondary dark:text-slate-400 italic">
                 * {interactionResult.disclaimer}
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function AIReviewPage() {
               </p>
             </div>
 
-            <div className="border-2 border-dashed border-border dark:border-[#233044] rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+            <div className="border-2 border-dashed border-border dark:border-[#24352C] rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="w-8 h-8 text-text-light dark:text-slate-500 mx-auto mb-2" />
               <p className="text-xs font-semibold text-text dark:text-white">
                 {ocrFile ? ocrFile.name : 'Select or drop a prescription image'}
@@ -310,7 +310,7 @@ export default function AIReviewPage() {
           {/* OCR Result Review */}
           {ocrResult && (
             <div className="card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-border dark:border-[#233044] pb-3">
+              <div className="flex items-center justify-between border-b border-border dark:border-[#24352C] pb-3">
                 <h4 className="text-sm font-bold text-text dark:text-white">Extracted Prescription Fields</h4>
                 <span className="text-xs text-text-secondary dark:text-slate-400">
                   Provider: {ocrResult.provider}
@@ -318,9 +318,9 @@ export default function AIReviewPage() {
               </div>
 
               {ocrResult.medicines?.length > 0 ? (
-                <div className="overflow-x-auto border border-border dark:border-[#233044] rounded-lg">
+                <div className="overflow-x-auto border border-border dark:border-[#24352C] rounded-lg">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 border-b border-border dark:border-[#233044] uppercase text-[10px]">
+                    <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 border-b border-border dark:border-[#24352C] uppercase text-[10px]">
                       <tr>
                         <th className="py-2.5 px-3">Candidate Medication</th>
                         <th className="py-2.5 px-3">Extracted Strength</th>
@@ -328,9 +328,9 @@ export default function AIReviewPage() {
                         <th className="py-2.5 px-3">Review Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border dark:divide-[#233044]">
+                    <tbody className="divide-y divide-border dark:divide-[#24352C]">
                       {ocrResult.medicines.map((med, i) => (
-                        <tr key={i} className="hover:bg-slate-50/40 dark:hover:bg-[#162238] transition-colors">
+                        <tr key={i} className="hover:bg-slate-50/40 dark:hover:bg-[#1C2922] transition-colors">
                           <td className="py-3 px-3 font-semibold text-text dark:text-white">{med.name}</td>
                           <td className="py-3 px-3 font-mono text-text dark:text-white">
                             {med.strength || 'Not detected'}

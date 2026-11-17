@@ -160,11 +160,17 @@ class PrescriptionModel(Base):
     clinical_notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # Pharmacy workflow state (see app.domain.pharmacy.PharmacyReview)
+    pharmacy_status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending", nullable=False, index=True)
 
     doctor: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[doctor_id], back_populates="prescriptions_written")
     patient: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[patient_id], back_populates="prescriptions_received")
     items: Mapped[List["PrescriptionItemModel"]] = relationship(
         "PrescriptionItemModel", back_populates="prescription", cascade="all, delete-orphan"
+    )
+    pharmacy_actions: Mapped[List["PharmacyActionModel"]] = relationship(
+        "PharmacyActionModel", back_populates="prescription", cascade="all, delete-orphan",
+        order_by="PharmacyActionModel.created_at",
     )
 
     __table_args__ = (
@@ -303,3 +309,22 @@ class PasswordResetTokenModel(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PharmacyActionModel(Base):
+    """History of pharmacist actions (verify / flag / dispense) on a prescription."""
+    __tablename__ = "pharmacy_actions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    prescription_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("prescriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    pharmacist_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    prescription: Mapped["PrescriptionModel"] = relationship("PrescriptionModel", back_populates="pharmacy_actions")
+    pharmacist: Mapped["UserModel"] = relationship("UserModel")
+
+    __table_args__ = (
+        CheckConstraint("action IN ('verify', 'flag', 'dispense')", name="valid_pharmacy_action"),
+    )

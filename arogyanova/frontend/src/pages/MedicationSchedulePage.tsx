@@ -60,8 +60,8 @@ export default function MedicationSchedulePage() {
       await api.post(`/schedule/${id}/log`, { action });
       toast.success(`Dose marked as ${action}!`);
       fetchSchedule();
-    } catch {
-      toast.error('Failed to log dose activity.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to log dose activity.');
     }
   };
 
@@ -108,8 +108,8 @@ export default function MedicationSchedulePage() {
       </div>
 
       {/* Advisory Banner */}
-      <div className="p-3.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/40 text-xs flex items-center gap-2.5 text-teal-900 dark:text-teal-200">
-        <AlertCircle className="w-4 h-4 text-primary dark:text-teal-400 shrink-0" />
+      <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-xs flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200">
+        <AlertCircle className="w-4 h-4 text-primary dark:text-emerald-400 shrink-0" />
         <span>
           <strong>Clinical Note:</strong> ArogyaNova tracks user-reported medication compliance.
           Doses marked as taken provide decision-support analytics for your healthcare team.
@@ -139,14 +139,17 @@ export default function MedicationSchedulePage() {
                 hour: '2-digit',
                 minute: '2-digit',
               });
+              const endOfToday = new Date();
+              endOfToday.setHours(23, 59, 59, 999);
+              const isFuture = dt > endOfToday; // doses for later days can't be logged yet
 
               return (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#162238] transition-colors"
+                  className="p-4 rounded-xl border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1C2922] transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 mt-0.5">
+                    <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400 mt-0.5">
                       <Pill className="w-5 h-5" />
                     </div>
                     <div>
@@ -186,6 +189,10 @@ export default function MedicationSchedulePage() {
                           <X className="w-3.5 h-3.5" />
                         )}
                         Marked as {entry.logged_action}
+                      </span>
+                    ) : isFuture ? (
+                      <span className="text-xs px-3 py-1.5 rounded-full font-medium inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 dark:bg-white/[0.04] dark:text-slate-400 dark:border-[#24352C]">
+                        <Clock className="w-3.5 h-3.5" /> Upcoming
                       </span>
                     ) : (
                       <>

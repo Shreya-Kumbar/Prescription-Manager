@@ -31,15 +31,15 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background dark:bg-[#0B132B] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative transition-colors duration-200">
+    <div className="auth-enter min-h-screen bg-transparent flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative transition-colors duration-200">
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center items-center gap-3">
-          <img src="/logo.svg" alt="ArogyaNova Logo" className="w-10 h-10" />
-          <span className="text-2xl font-bold text-text dark:text-white tracking-tight">ArogyaNova</span>
+          <img src="/logo.svg" alt="ArogyaNova Logo" className="w-10 h-10 float" />
+          <span className="text-2xl font-bold tracking-tight text-gradient">ArogyaNova</span>
         </div>
       </div>
 
@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
 
           {message ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-teal-200 dark:border-teal-800/60 bg-teal-50 dark:bg-teal-950/40 p-4 text-sm text-text dark:text-slate-100">
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-sm text-text dark:text-slate-100">
                 {message}
               </div>
               {devToken && (

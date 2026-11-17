@@ -1,474 +1,430 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText,
-  Users,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  PlusCircle,
   Activity,
+  BarChart3,
   Calendar,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  Download,
+  FileText,
+  HeartPulse,
+  History,
   Pill,
-  ArrowRight,
+  PieChart as PieIcon,
+  PlusCircle,
   ShieldCheck,
-  Check,
-  X,
+  Stethoscope,
+  Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import StatCard from '../components/ui/StatCard';
-import Badge from '../components/ui/Badge';
-import EmptyState from '../components/ui/EmptyState';
+import {
+  ActivityList,
+  BarCard,
+  DonutCard,
+  PageHeader,
+  ProgressList,
+  STATUS_COLORS,
+  lastSixMonths,
+  timeAgo,
+} from '../components/dashboard/widgets';
+
+const fullName = (u: any) => (u ? `${u.first_name} ${u.last_name}` : 'Unknown');
+const fmtDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '');
+const statusSlices = (dist: Record<string, number>) =>
+  ['active', 'completed', 'draft', 'cancelled', 'expired']
+    .map((s) => ({ name: s[0].toUpperCase() + s.slice(1), value: dist[s] ?? 0, color: STATUS_COLORS[s] }))
+    .filter((d) => d.value > 0 || ['active', 'completed', 'draft', 'cancelled'].includes(d.name.toLowerCase()));
+const countBy = <T,>(arr: T[], key: (x: T) => string) =>
+  arr.reduce<Record<string, number>>((m, x) => ((m[key(x)] = (m[key(x)] ?? 0) + 1), m), {});
+
+/** Loads several endpoints in parallel; a failing optional endpoint never breaks the page. */
+function useDashboardData(role?: string) {
+  const [data, setData] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    const wanted: Record<string, string> = { dash: '/dashboard', rx: '/prescriptions?per_page=100' };
+    if (role === 'doctor' || role === 'administrator') wanted.analytics = '/analytics/overview?days=365';
+    if (role === 'patient') wanted.schedule = '/schedule';
+    if (role === 'pharmacist') wanted.meds = '/medications?per_page=200';
+    if (role === 'administrator') wanted.audits = '/admin/audit-logs';
+
+    const entries = await Promise.all(
+      Object.entries(wanted).map(async ([k, url]) => {
+        try {
+          const r = await api.get(url);
+          return [k, Array.isArray(r.data) ? r.data : r.data?.items ?? r.data] as const;
+        } catch {
+          return [k, null] as const;
+        }
+      }),
+    );
+    const next = Object.fromEntries(entries);
+    if (!next.dash) toast.error('Failed to load dashboard.');
+    setData(next);
+    setLoading(false);
+  };
+
+  useEffect(() => { if (role) load(); }, [role]);
+  return { data, loading, reload: load };
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const role = user?.role;
+  const { data, loading, reload } = useDashboardData(role);
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
-
-  const fetchDashboard = async () => {
-    try {
-      setIsLoading(true);
-      const res = await api.get('/dashboard');
-      setData(res.data);
-    } catch {
-      toast.error('Failed to load dashboard metrics.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogSchedule = async (scheduleId: string, action: 'taken' | 'skipped') => {
-    try {
-      await api.post(`/schedule/${scheduleId}/log`, { action });
-      toast.success(`Dose marked as ${action}`);
-      fetchDashboard();
-    } catch {
-      toast.error('Failed to log dose action.');
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="card p-6 h-32 animate-pulse bg-slate-100 dark:bg-slate-800" />
-          ))}
+        <div className="skeleton h-12 w-80 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-32 rounded-xl" />)}
         </div>
-        <div className="card p-6 h-64 animate-pulse bg-slate-100 dark:bg-slate-800" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="skeleton h-80 rounded-xl" />
+          <div className="skeleton h-80 rounded-xl lg:col-span-2" />
+        </div>
       </div>
     );
   }
 
-  const role = user?.role;
-  const stats = data?.stats || {};
+  const props = { user, data, reload };
+  if (role === 'doctor') return <DoctorDashboard {...props} />;
+  if (role === 'patient') return <PatientDashboard {...props} />;
+  if (role === 'pharmacist') return <PharmacistDashboard {...props} />;
+  if (role === 'administrator') return <AdminDashboard {...props} />;
+  return null;
+}
+
+type DashProps = { user: any; data: Record<string, any>; reload: () => void };
+
+/* ===================================================================== */
+/*  DOCTOR                                                               */
+/* ===================================================================== */
+function DoctorDashboard({ user, data }: DashProps) {
+  const navigate = useNavigate();
+  const stats = data.dash?.stats ?? {};
+  const rx: any[] = data.rx ?? [];
+  const a = data.analytics ?? {};
+  const adherence = a.adherence_rate;
+
+  const perPatient = useMemo(() => {
+    const counts = countBy(rx, (p) => fullName(p.patient));
+    const max = Math.max(1, ...Object.values(counts));
+    const active = countBy(rx.filter((p) => p.status === 'active'), (p) => fullName(p.patient));
+    const palette = ['#4FA67A', '#7DB9DE', '#E6B566', '#B7A6E0', '#F2A98C'];
+    return Object.entries(counts)
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, 5)
+      .map(([label, value], i) => ({ label, value, max, sub: `${active[label] ?? 0} active · ${value} total`, color: palette[i % palette.length] }));
+  }, [rx]);
+
+  const exportCsv = () => {
+    const rows = [['Prescription', 'Patient', 'Status', 'Issue date', 'Medicines'], ...rx.map((p) => [p.id.slice(0, 8), fullName(p.patient), p.status, p.issue_date, p.item_count])];
+    const link = document.createElement('a');
+    link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map((r) => r.join(',')).join('\n'));
+    link.download = `ArogyaNova_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    toast.success('Report exported');
+  };
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Welcome Banner */}
-      <div className="card p-6 bg-gradient-to-r from-teal-50 via-white to-slate-50 dark:from-teal-950/40 dark:via-[#131C31] dark:to-slate-900/60 border-teal-100 dark:border-teal-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold text-primary dark:text-teal-400 uppercase tracking-wider">
-            {role?.toUpperCase()} PORTAL
-          </span>
-          <h2 className="text-xl font-bold text-text dark:text-white mt-0.5">
-            Welcome back, {role === 'doctor' ? `Dr. ${user?.first_name} ${user?.last_name}` : user?.first_name}!
-          </h2>
-          <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">
-            ArogyaNova Intelligent Prescription Management &amp; Medication Care System.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Welcome back, Dr. ${user?.last_name ?? ''}`}
+        subtitle="Here's what's happening with your patients and prescriptions."
+        chips={[
+          ...(stats.draft_prescriptions ? [{ label: `${stats.draft_prescriptions} drafts pending`, color: '#E6B566' }] : []),
+          { label: `${stats.active_prescriptions ?? 0} active treatments`, color: '#4FA67A' },
+          ...(adherence != null ? [{ label: `Adherence ${adherence}%` }] : []),
+        ]}
+        action={<button onClick={exportCsv} className="btn-secondary text-xs"><Download className="w-3.5 h-3.5" /> Export CSV</button>}
+      />
 
-        {role === 'doctor' && (
-          <button
-            onClick={() => navigate('/prescriptions/new')}
-            className="btn-primary text-sm shadow-sm shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            New Prescription
-          </button>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Patients" value={stats.total_patients ?? 0} subtitle="Under your care" icon={Users} color="primary" />
+        <StatCard title="Prescriptions" value={stats.total_prescriptions ?? 0} subtitle="Authored by you" icon={FileText} color="secondary" />
+        <StatCard title="Active" value={stats.active_prescriptions ?? 0} subtitle={`${stats.total_prescriptions ? Math.round((stats.active_prescriptions / stats.total_prescriptions) * 100) : 0}% of total`} icon={Activity} color="success" />
+        <StatCard title="Adherence" value={adherence != null ? `${adherence}%` : '—'} subtitle={`${a.doses_taken ?? 0} of ${a.doses_logged ?? 0} doses taken`} icon={HeartPulse} color="warning" />
       </div>
 
-      {/* 1. DOCTOR DASHBOARD */}
-      {role === 'doctor' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Authorized Patients"
-              value={stats.patient_count ?? 0}
-              subtitle="Registered patient records"
-              icon={Users}
-              color="primary"
-            />
-            <StatCard
-              title="Total Prescriptions"
-              value={stats.total_prescriptions ?? 0}
-              subtitle="Authored in system"
-              icon={FileText}
-              color="secondary"
-            />
-            <StatCard
-              title="Draft Prescriptions"
-              value={stats.draft_prescriptions ?? 0}
-              subtitle="Pending review/finalization"
-              icon={Clock}
-              color="warning"
-            />
-            <StatCard
-              title="Active Prescriptions"
-              value={stats.active_prescriptions ?? 0}
-              subtitle="Currently in progress"
-              icon={CheckCircle2}
-              color="success"
-            />
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard title="By status" icon={PieIcon} tone="amber" data={statusSlices(a.status_distribution ?? countBy(rx, (p) => p.status))} centerLabel="prescriptions" />
+        <div className="lg:col-span-2">
+          <BarCard title="Prescriptions per month" icon={BarChart3} tone="blue" data={lastSixMonths(rx.map((p) => p.issue_date))} xKey="month" yKey="count" right={<span className="text-xs text-text-secondary dark:text-slate-400">Last 6 months</span>} />
+        </div>
+      </div>
 
-          <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-text dark:text-white text-sm">Recent Prescriptions Authored</h3>
-                <p className="text-xs text-text-secondary dark:text-slate-400">Latest clinical prescriptions issued</p>
-              </div>
-              <button
-                onClick={() => navigate('/prescriptions')}
-                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
-              >
-                View all <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <BarCard title="Dose adherence, last 7 days" icon={HeartPulse} tone="teal" color="#7DB9DE" unit="%" yMax={100}
+          data={(a.adherence_by_day ?? []).map((d: any) => ({ ...d, rate: d.rate ?? 0 }))} xKey="day" yKey="rate"
+          empty="No doses logged this week" />
+        <ProgressList title="Patient load" icon={Users} tone="violet" note="Prescriptions per patient" items={perPatient} empty="No patients yet" />
+      </div>
 
-            {stats.recent_prescriptions?.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
-                    <tr>
-                      <th className="py-3 px-4">Date</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Diagnosis</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border dark:divide-[#233044]">
-                    {stats.recent_prescriptions.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
-                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
-                        <td className="py-3 px-4">
-                          <Badge status={p.status} size="sm" />
-                        </td>
-                        <td className="py-3 px-4 font-medium text-text dark:text-white">
-                          {p.diagnosis || 'Clinical evaluation'}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => navigate(`/prescriptions/${p.id}`)}
-                            className="text-primary dark:text-teal-400 hover:underline font-semibold"
-                          >
-                            Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      <ActivityList
+        title="Recent prescriptions"
+        icon={Clock}
+        tone="blue"
+        onViewAll={() => navigate('/prescriptions')}
+        items={rx.slice(0, 6).map((p) => ({
+          key: p.id,
+          title: p.diagnosis || 'Prescription',
+          sub: `${fullName(p.patient)} · ${p.item_count} medicine${p.item_count === 1 ? '' : 's'} · ${fmtDate(p.issue_date)}`,
+          status: p.status,
+          onClick: () => navigate(`/prescriptions/${p.id}`),
+        }))}
+        empty="No prescriptions yet"
+      />
+    </div>
+  );
+}
+
+/* ===================================================================== */
+/*  PATIENT                                                              */
+/* ===================================================================== */
+function PatientDashboard({ user, data, reload }: DashProps) {
+  const navigate = useNavigate();
+  const stats = data.dash?.stats ?? {};
+  const schedule: any[] = data.schedule ?? [];
+  const rx: any[] = data.rx ?? [];
+
+  const logDose = async (id: string, action: 'taken' | 'skipped') => {
+    try {
+      await api.post(`/schedule/${id}/log`, { action });
+      toast.success(`Dose marked as ${action}`);
+      reload();
+    } catch {
+      toast.error('Could not log that dose.');
+    }
+  };
+
+  const today = new Date().toDateString();
+  const todays = schedule.filter((s) => new Date(s.scheduled_at).toDateString() === today);
+  const taken = todays.filter((s) => s.logged_action === 'taken').length;
+  const skipped = todays.filter((s) => s.logged_action === 'skipped').length;
+  const logged = schedule.filter((s) => s.logged_action);
+  const adherence = logged.length ? Math.round((logged.filter((s) => s.logged_action === 'taken').length / logged.length) * 100) : null;
+
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6 + i);
+    const day = schedule.filter((s) => new Date(s.scheduled_at).toDateString() === d.toDateString() && s.logged_action);
+    const t = day.filter((s) => s.logged_action === 'taken').length;
+    return { day: d.toLocaleDateString('en', { weekday: 'short' }), rate: day.length ? Math.round((t / day.length) * 100) : 0 };
+  });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`Hello, ${user?.first_name ?? ''}`}
+        subtitle="Your medicines and progress for today."
+        chips={[
+          { label: `${todays.length - taken - skipped} doses left today`, color: '#E6B566' },
+          ...(adherence != null ? [{ label: `Adherence ${adherence}%`, color: '#7DB9DE' }] : []),
+        ]}
+        action={<button onClick={() => navigate('/schedule')} className="btn-primary text-xs"><Calendar className="w-3.5 h-3.5" /> Full schedule</button>}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Active prescriptions" value={stats.active_prescriptions ?? 0} subtitle={`${stats.total_prescriptions ?? 0} in total`} icon={FileText} color="primary" />
+        <StatCard title="Doses today" value={todays.length} subtitle="Scheduled for today" icon={Pill} color="secondary" />
+        <StatCard title="Taken today" value={taken} subtitle={todays.length ? `${Math.round((taken / todays.length) * 100)}% done` : 'Nothing scheduled'} icon={CheckCircle2} color="success" />
+        <StatCard title="Adherence" value={adherence != null ? `${adherence}%` : '—'} subtitle={`${logged.length} doses logged`} icon={HeartPulse} color="warning" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard title="Today's doses" icon={PieIcon} tone="teal" centerLabel="doses today" data={[
+          { name: 'Taken', value: taken, color: '#7DB9DE' },
+          { name: 'Pending', value: todays.length - taken - skipped, color: '#4FA67A' },
+          { name: 'Skipped', value: skipped, color: '#E08E8E' },
+        ]} />
+        <div className="lg:col-span-2">
+          <BarCard title="Your adherence, last 7 days" icon={HeartPulse} tone="blue" color="#4FA67A" unit="%" yMax={100} data={week} xKey="day" yKey="rate" empty="Log your doses to see your progress" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActivityList
+          title="Today's medicines"
+          icon={Clock}
+          tone="amber"
+          onViewAll={() => navigate('/schedule')}
+          empty="No medicines scheduled today"
+          items={todays.map((s) => ({
+            key: s.id,
+            title: s.medication_name,
+            sub: `${s.dosage} · ${new Date(s.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            dot: s.logged_action === 'taken' ? '#7DB9DE' : s.logged_action === 'skipped' ? '#E08E8E' : '#4FA67A',
+            actions: s.logged_action ? (
+              <span className="text-xs font-medium capitalize text-text-secondary dark:text-slate-400">{s.logged_action}</span>
             ) : (
-              <EmptyState
-                icon={FileText}
-                title="No Prescriptions Authored Yet"
-                description="Start by creating your first prescription for an authorized patient."
-                actionText="Create Prescription"
-                onAction={() => navigate('/prescriptions/new')}
-              />
-            )}
-          </div>
-        </>
-      )}
-
-      {/* 2. PATIENT DASHBOARD */}
-      {role === 'patient' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard
-              title="Active Prescriptions"
-              value={stats.active_prescriptions ?? 0}
-              subtitle="Active treatment plans"
-              icon={FileText}
-              color="primary"
-            />
-            <StatCard
-              title="Total Prescriptions"
-              value={stats.total_prescriptions ?? 0}
-              subtitle="Lifetime prescriptions"
-              icon={Activity}
-              color="secondary"
-            />
-            <StatCard
-              title="Adherence Rate"
-              value={`${stats.adherence?.adherence_rate ?? 100}%`}
-              subtitle={stats.adherence?.status ?? 'Good'}
-              icon={CheckCircle2}
-              color="success"
-            />
-          </div>
-
-          {/* Today's Schedule with Take/Skip buttons */}
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-text dark:text-white text-sm">Today's Medication Doses</h3>
-                <p className="text-xs text-text-secondary dark:text-slate-400">
-                  Record your medication intake to maintain accurate adherence records
-                </p>
+              <div className="flex gap-1.5">
+                <button onClick={() => logDose(s.id, 'taken')} className="btn-primary !px-2.5 !py-1 text-xs">Taken</button>
+                <button onClick={() => logDose(s.id, 'skipped')} className="btn-secondary !px-2.5 !py-1 text-xs">Skip</button>
               </div>
-              <button
-                onClick={() => navigate('/schedule')}
-                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
-              >
-                Full Schedule <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            ),
+          }))}
+        />
+        <ActivityList
+          title="My prescriptions"
+          icon={FileText}
+          tone="blue"
+          onViewAll={() => navigate('/prescriptions')}
+          empty="No prescriptions yet"
+          items={rx.slice(0, 6).map((p) => ({
+            key: p.id,
+            title: p.diagnosis || 'Prescription',
+            sub: `Dr. ${p.doctor?.last_name ?? ''} · ${p.item_count} medicine${p.item_count === 1 ? '' : 's'} · ${fmtDate(p.issue_date)}`,
+            status: p.status,
+            onClick: () => navigate(`/prescriptions/${p.id}`),
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
 
-            {stats.today_schedule?.length > 0 ? (
-              <div className="space-y-3">
-                {stats.today_schedule.map((entry: any) => (
-                  <div
-                    key={entry.id}
-                    className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-primary dark:text-teal-400 mt-0.5">
-                        <Pill className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm text-text dark:text-white">
-                          {entry.medication_name} — {entry.dosage}
-                        </p>
-                        <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-                          {new Date(entry.scheduled_time).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </div>
+/* ===================================================================== */
+/*  PHARMACIST                                                           */
+/* ===================================================================== */
+function PharmacistDashboard({ user, data }: DashProps) {
+  const navigate = useNavigate();
+  const stats = data.dash?.stats ?? {};
+  const rx: any[] = data.rx ?? [];
+  const activeRx = rx.filter((p) => p.status === 'active');
+  const queue = (state: string) => activeRx.filter((p) => (p.pharmacy_status ?? 'pending') === state);
 
-                    <div className="flex items-center gap-2">
-                      {entry.logged_action ? (
-                        <span
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                            entry.logged_action === 'taken'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/40'
-                          }`}
-                        >
-                          Marked as {entry.logged_action}
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleLogSchedule(entry.id, 'taken')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
-                          >
-                            <Check className="w-3.5 h-3.5" /> Taken
-                          </button>
-                          <button
-                            onClick={() => handleLogSchedule(entry.id, 'skipped')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" /> Skipped
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={Calendar}
-                title="No Pending Doses for Today"
-                description="You have no medication doses scheduled right now."
-              />
-            )}
-          </div>
-        </>
-      )}
+  const byDoctor = useMemo(() => {
+    const counts = countBy(rx, (p) => `Dr. ${fullName(p.doctor)}`);
+    const max = Math.max(1, ...Object.values(counts));
+    const palette = ['#B7A6E0', '#4FA67A', '#7DB9DE', '#E6B566'];
+    return Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 5)
+      .map(([label, value], i) => ({ label, value, max, sub: `${value} prescription${value === 1 ? '' : 's'}`, color: palette[i % palette.length] }));
+  }, [rx]);
 
-      {/* 3. PHARMACIST DASHBOARD */}
-      {role === 'pharmacist' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard
-              title="Awaiting Review"
-              value={stats.pending_reviews ?? 0}
-              subtitle="Prescriptions in queue"
-              icon={Clock}
-              color="warning"
-            />
-            <StatCard
-              title="Active Prescriptions"
-              value={stats.active_prescriptions ?? 0}
-              subtitle="Valid system prescriptions"
-              icon={CheckCircle2}
-              color="primary"
-            />
-            <StatCard
-              title="Interactions Flagged"
-              value={stats.flagged_count ?? 0}
-              subtitle="Requiring professional assessment"
-              icon={AlertTriangle}
-              color="secondary"
-            />
-          </div>
+  const row = (p: any) => ({
+    key: p.id,
+    title: fullName(p.patient),
+    sub: `${p.diagnosis || 'Prescription'} · Dr. ${p.doctor?.last_name ?? ''} · ${p.item_count} medicine${p.item_count === 1 ? '' : 's'}`,
+    dot: p.pharmacy_status === 'verified' ? '#7DB9DE' : p.pharmacy_status === 'flagged' ? '#E08E8E' : '#E6B566',
+    onClick: () => navigate(`/prescriptions/${p.id}`),
+  });
 
-          <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-text dark:text-white text-sm">Review Queue</h3>
-                <p className="text-xs text-text-secondary dark:text-slate-400">Prescriptions awaiting pharmacist verification</p>
-              </div>
-              <button
-                onClick={() => navigate('/prescriptions')}
-                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
-              >
-                Search all records <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`Welcome back, ${user?.first_name ?? ''}`}
+        subtitle="Verify prescriptions, flag problems to the doctor and dispense medicines."
+        chips={[
+          { label: `${stats.prescriptions_pending_review ?? 0} to review`, color: '#E6B566' },
+          { label: `${stats.ready_to_dispense ?? 0} ready to dispense`, color: '#7DB9DE' },
+        ]}
+        action={<button onClick={() => navigate('/ai-review')} className="btn-primary text-xs"><ShieldCheck className="w-3.5 h-3.5" /> Check interactions</button>}
+      />
 
-            {stats.recent_prescriptions?.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
-                    <tr>
-                      <th className="py-3 px-4">Issue Date</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Diagnosis</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border dark:divide-[#233044]">
-                    {stats.recent_prescriptions.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] transition-colors">
-                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{p.issue_date}</td>
-                        <td className="py-3 px-4">
-                          <Badge status={p.status} size="sm" />
-                        </td>
-                        <td className="py-3 px-4 font-medium text-text dark:text-white">{p.diagnosis || 'Clinical evaluation'}</td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => navigate(`/prescriptions/${p.id}`)}
-                            className="text-primary dark:text-teal-400 hover:underline font-semibold"
-                          >
-                            Review Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState
-                icon={CheckCircle2}
-                title="Review Queue Clear"
-                description="All active prescriptions have been reviewed."
-              />
-            )}
-          </div>
-        </>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="To review" value={stats.prescriptions_pending_review ?? 0} subtitle="Awaiting verification" icon={ClipboardCheck} color="warning" />
+        <StatCard title="Ready to dispense" value={stats.ready_to_dispense ?? 0} subtitle="Verified, not yet handed out" icon={CheckCircle2} color="secondary" />
+        <StatCard title="Flagged" value={stats.flagged ?? 0} subtitle="Sent back to the doctor" icon={Activity} color="success" />
+        <StatCard title="Dispensed" value={stats.dispensed ?? 0} subtitle="Medicines handed out" icon={Pill} color="primary" />
+      </div>
 
-      {/* 4. ADMINISTRATOR DASHBOARD */}
-      {role === 'administrator' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Users"
-              value={stats.total_users ?? 0}
-              subtitle="Registered accounts"
-              icon={Users}
-              color="primary"
-            />
-            <StatCard
-              title="Doctors"
-              value={stats.total_doctors ?? 0}
-              subtitle="Licensed prescribers"
-              icon={ShieldCheck}
-              color="secondary"
-            />
-            <StatCard
-              title="Patients"
-              value={stats.total_patients ?? 0}
-              subtitle="Active patient records"
-              icon={Activity}
-              color="success"
-            />
-            <StatCard
-              title="Prescriptions"
-              value={stats.total_prescriptions ?? 0}
-              subtitle="Total system records"
-              icon={FileText}
-              color="warning"
-            />
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard title="Pharmacy queue" icon={PieIcon} tone="amber" centerLabel="active prescriptions" data={[
+          { name: 'To review', value: stats.prescriptions_pending_review ?? 0, color: '#E6B566' },
+          { name: 'Ready', value: stats.ready_to_dispense ?? 0, color: '#7DB9DE' },
+          { name: 'Flagged', value: stats.flagged ?? 0, color: '#E08E8E' },
+          { name: 'Dispensed', value: stats.dispensed ?? 0, color: '#4FA67A' },
+        ]} />
+        <div className="lg:col-span-2">
+          <BarCard title="Prescriptions per month" icon={BarChart3} tone="blue" data={lastSixMonths(rx.map((p) => p.issue_date))} xKey="month" yKey="count" />
+        </div>
+      </div>
 
-          <div className="card overflow-hidden">
-            <div className="p-5 border-b border-border dark:border-[#233044] flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-text dark:text-white text-sm">System Security Audit Log</h3>
-                <p className="text-xs text-text-secondary dark:text-slate-400">Security events and user action traces</p>
-              </div>
-              <button
-                onClick={() => navigate('/users')}
-                className="text-xs font-medium text-primary dark:text-teal-400 hover:underline flex items-center gap-1"
-              >
-                Manage users <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ActivityList title="To review" icon={ClipboardCheck} tone="amber" empty="Nothing waiting for review"
+          onViewAll={() => navigate('/prescriptions')} items={[...queue('pending'), ...queue('flagged')].slice(0, 6).map(row)} />
+        <ActivityList title="Ready to dispense" icon={Pill} tone="teal" empty="Nothing verified yet"
+          onViewAll={() => navigate('/prescriptions')} items={queue('verified').slice(0, 6).map(row)} />
+        <ProgressList title="Prescribers" icon={Stethoscope} tone="violet" note="By volume" items={byDoctor} empty="No prescriptions yet" />
+      </div>
+    </div>
+  );
+}
 
-            {stats.recent_audits?.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
-                    <tr>
-                      <th className="py-3 px-4">Timestamp</th>
-                      <th className="py-3 px-4">Action</th>
-                      <th className="py-3 px-4">Resource</th>
-                      <th className="py-3 px-4">Client IP</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border dark:divide-[#233044]">
-                    {stats.recent_audits.map((a: any) => (
-                      <tr key={a.id} className="hover:bg-slate-50/50 dark:hover:bg-[#162238] font-mono text-[11px] transition-colors">
-                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">
-                          {new Date(a.created_at).toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 font-semibold text-text dark:text-white">{a.action}</td>
-                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{a.resource_type}</td>
-                        <td className="py-3 px-4 text-text-secondary dark:text-slate-400">{a.ip_address || '127.0.0.1'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState
-                icon={ShieldCheck}
-                title="Audit Trail Active"
-                description="System events and security access logs are recorded in real time."
-              />
-            )}
-          </div>
-        </>
-      )}
+/* ===================================================================== */
+/*  ADMINISTRATOR                                                        */
+/* ===================================================================== */
+function AdminDashboard({ user, data }: DashProps) {
+  const navigate = useNavigate();
+  const stats = data.dash?.stats ?? {};
+  const roles = stats.users_by_role ?? {};
+  const rx: any[] = data.rx ?? [];
+  const audits: any[] = data.audits ?? [];
+  const totalUsers = Object.values(roles).reduce((s: number, v: any) => s + v, 0) as number;
+  const failedLogins = audits.filter((a) => a.action?.includes('fail')).length;
+
+  const byDoctor = useMemo(() => {
+    const counts = countBy(rx, (p) => `Dr. ${fullName(p.doctor)}`);
+    const max = Math.max(1, ...Object.values(counts));
+    return Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 5)
+      .map(([label, value], i) => ({ label, value, max, sub: `${value} prescription${value === 1 ? '' : 's'}`, color: ['#4FA67A', '#7DB9DE', '#B7A6E0', '#E6B566'][i % 4] }));
+  }, [rx]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`Welcome back, ${user?.first_name ?? ''}`}
+        subtitle="System health, users and security activity."
+        chips={[
+          ...(failedLogins ? [{ label: `${failedLogins} failed logins`, color: '#E08E8E' }] : []),
+          { label: `${totalUsers} users`, color: '#4FA67A' },
+        ]}
+        action={<button onClick={() => navigate('/users')} className="btn-primary text-xs"><Users className="w-3.5 h-3.5" /> Manage users</button>}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Users" value={totalUsers} subtitle="Registered accounts" icon={Users} color="primary" />
+        <StatCard title="Doctors" value={roles.doctor ?? 0} subtitle="Licensed prescribers" icon={Stethoscope} color="secondary" />
+        <StatCard title="Patients" value={roles.patient ?? 0} subtitle="Patient records" icon={HeartPulse} color="success" />
+        <StatCard title="Prescriptions" value={stats.total_prescriptions ?? 0} subtitle={`${stats.active_prescriptions ?? 0} active`} icon={FileText} color="warning" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard title="Users by role" icon={PieIcon} tone="violet" centerLabel="users" data={[
+          { name: 'Doctors', value: roles.doctor ?? 0, color: '#4FA67A' },
+          { name: 'Patients', value: roles.patient ?? 0, color: '#7DB9DE' },
+          { name: 'Pharmacists', value: roles.pharmacist ?? 0, color: '#E6B566' },
+          { name: 'Admins', value: roles.administrator ?? 0, color: '#B7A6E0' },
+        ]} />
+        <div className="lg:col-span-2">
+          <BarCard title="Prescriptions per month" icon={BarChart3} tone="blue" data={lastSixMonths(rx.map((p) => p.issue_date))} xKey="month" yKey="count" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActivityList
+          title="Security audit log"
+          icon={History}
+          tone="coral"
+          onViewAll={() => navigate('/users')}
+          empty="No activity yet"
+          items={audits.slice(0, 7).map((a) => ({
+            key: a.id,
+            title: a.action.replace(/[._]/g, ' '),
+            sub: `${a.resource_type} · ${a.ip_address || 'local'} · ${timeAgo(a.created_at)}`,
+            dot: a.action.includes('fail') ? '#E08E8E' : a.action.includes('login') ? '#7DB9DE' : '#4FA67A',
+          }))}
+        />
+        <ProgressList title="Prescriptions by doctor" icon={Stethoscope} tone="blue" note="All time" items={byDoctor} empty="No prescriptions yet" />
+      </div>
     </div>
   );
 }

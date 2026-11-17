@@ -9,19 +9,20 @@ from datetime import date, datetime, timezone
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.database import get_db
 from app.domain.base_user import UserRole
+from app.domain.pharmacy import PharmacyAction, PharmacyReview, PharmacyStatus
 from app.domain.prescription import Prescription, PrescriptionItem, PrescriptionStatus, RouteOfAdministration
 from app.models.models import (
     AuditLogModel, MedicationModel, MedicationScheduleModel,
-    NotificationModel, PrescriptionItemModel, PrescriptionModel, UserModel,
+    NotificationModel, PharmacyActionModel, PrescriptionItemModel, PrescriptionModel, UserModel,
 )
 from app.schemas.schemas import (
-    MessageResponse, PrescriptionCreate, PrescriptionDetail,
+    MessageResponse, PharmacyActionRequest, PrescriptionCreate, PrescriptionDetail,
     PrescriptionListResponse, PrescriptionSummary, PrescriptionUpdate,
 )
 from app.security.dependencies import get_current_user, require_role
@@ -83,6 +84,7 @@ def _build_summary(model: PrescriptionModel) -> PrescriptionSummary:
         patient=UserResponse.model_validate(model.patient) if model.patient else None,
         doctor=UserResponse.model_validate(model.doctor) if model.doctor else None,
         item_count=len(model.items),
+        pharmacy_status=model.pharmacy_status or "pending",
     )
 
 
@@ -96,8 +98,10 @@ async def _get_prescription_or_404(
             selectinload(PrescriptionModel.items).selectinload(PrescriptionItemModel.medication),
             selectinload(PrescriptionModel.patient),
             selectinload(PrescriptionModel.doctor),
+            selectinload(PrescriptionModel.pharmacy_actions).selectinload(PharmacyActionModel.pharmacist),
         )
         .where(PrescriptionModel.id == prescription_id)
+        .execution_options(populate_existing=True)  # always re-read after a change
     )
     p = result.scalar_one_or_none()
     if not p:
@@ -127,6 +131,7 @@ async def list_prescriptions(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None, alias="status"),
+    pharmacy_status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -153,6 +158,21 @@ async def list_prescriptions(
 
     if status_filter:
         q = q.where(PrescriptionModel.status == status_filter)
+    if pharmacy_status:
+        q = q.where(PrescriptionModel.pharmacy_status == pharmacy_status)
+    if search:
+        # Search diagnosis, notes, patient name/email and doctor name
+        term = f"%{search.strip()}%"
+        patient_ids = select(UserModel.id).where(or_(
+            UserModel.first_name.ilike(term), UserModel.last_name.ilike(term),
+            (UserModel.first_name + " " + UserModel.last_name).ilike(term), UserModel.email.ilike(term),
+        ))
+        q = q.where(or_(
+            PrescriptionModel.diagnosis.ilike(term),
+            PrescriptionModel.clinical_notes.ilike(term),
+            PrescriptionModel.patient_id.in_(patient_ids),
+            PrescriptionModel.doctor_id.in_(patient_ids),
+        ))
     if date_from:
         q = q.where(PrescriptionModel.issue_date >= date_from)
     if date_to:
@@ -410,7 +430,7 @@ async def cancel_prescription(
 
 
 def _build_detail(model: PrescriptionModel, current_user: UserModel) -> PrescriptionDetail:
-    from app.schemas.schemas import PrescriptionItemResponse, UserResponse, MedicationResponse
+    from app.schemas.schemas import MedicationResponse, PharmacyActionResponse, PrescriptionItemResponse, UserResponse
     items = []
     for item in model.items:
         med = MedicationResponse.model_validate(item.medication) if item.medication else None
@@ -447,4 +467,76 @@ def _build_detail(model: PrescriptionModel, current_user: UserModel) -> Prescrip
         doctor=UserResponse.model_validate(model.doctor) if model.doctor else None,
         item_count=len(items),
         items=items,
+        pharmacy_status=model.pharmacy_status or "pending",
+        pharmacy_history=[
+            PharmacyActionResponse(
+                action=a.action,
+                notes=a.notes,
+                pharmacist_name=f"{a.pharmacist.first_name} {a.pharmacist.last_name}" if a.pharmacist else "Pharmacist",
+                created_at=a.created_at,
+            )
+            for a in (model.pharmacy_actions or [])
+        ],
     )
+
+
+
+@router.post("/{prescription_id}/pharmacy", response_model=PrescriptionDetail)
+async def pharmacy_action(
+    prescription_id: uuid.UUID,
+    body: PharmacyActionRequest,
+    request: Request,
+    current_user: Annotated[UserModel, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PrescriptionDetail:
+    """Pharmacist verifies, flags (with a reason) or dispenses an active prescription."""
+    if current_user.role != UserRole.PHARMACIST.value:
+        raise HTTPException(status_code=403, detail="Only pharmacists can verify, flag or dispense prescriptions.")
+
+    model = await _get_prescription_or_404(prescription_id, db)
+
+    # Domain object enforces the workflow rules (raises ValueError -> 400)
+    review = PharmacyReview(prescription_status=model.status, status=PharmacyStatus(model.pharmacy_status or "pending"))
+    new_status = review.apply(PharmacyAction(body.action), body.notes)
+    model.pharmacy_status = new_status.value
+
+    db.add(PharmacyActionModel(
+        prescription_id=model.id, pharmacist_id=current_user.id, action=body.action, notes=body.notes,
+    ))
+
+    pharmacist = f"{current_user.first_name} {current_user.last_name}"
+    if body.action == PharmacyAction.FLAG.value:
+        db.add(NotificationModel(
+            user_id=model.doctor_id,
+            title="Prescription flagged by pharmacy",
+            message=f"{pharmacist} flagged a prescription for {model.patient.first_name} {model.patient.last_name}: {body.notes}",
+            priority="high",
+            action_url=f"/prescriptions/{model.id}",
+        ))
+    elif body.action == PharmacyAction.DISPENSE.value:
+        db.add(NotificationModel(
+            user_id=model.patient_id,
+            title="Medicines dispensed",
+            message=f"Your medicines have been dispensed by {pharmacist}. Follow your dose schedule.",
+            priority="normal",
+            action_url=f"/prescriptions/{model.id}",
+        ))
+    elif body.action == PharmacyAction.VERIFY.value:
+        db.add(NotificationModel(
+            user_id=model.doctor_id,
+            title="Prescription verified",
+            message=f"{pharmacist} verified the prescription for {model.patient.first_name} {model.patient.last_name}.",
+            priority="low",
+            action_url=f"/prescriptions/{model.id}",
+        ))
+
+    db.add(AuditLogModel(
+        actor_id=current_user.id,
+        action=f"pharmacy.{body.action}",
+        resource_type="prescription",
+        resource_id=str(model.id),
+        details=body.notes,
+        ip_address=request.client.host if request.client else None,
+    ))
+    await db.commit()
+    return _build_detail(await _get_prescription_or_404(prescription_id, db), current_user)

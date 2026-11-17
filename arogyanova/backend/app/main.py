@@ -34,6 +34,17 @@ logger = structlog.get_logger()
 limiter = Limiter(key_func=get_remote_address)
 
 
+def _add_missing_columns(sync_conn) -> None:
+    """
+    Lightweight schema upgrade for existing databases: create_all() makes new tables
+    but never adds columns to tables that already exist.
+    """
+    from sqlalchemy import inspect, text
+    cols = {c["name"] for c in inspect(sync_conn).get_columns("prescriptions")}
+    if "pharmacy_status" not in cols:
+        sync_conn.execute(text("ALTER TABLE prescriptions ADD COLUMN pharmacy_status VARCHAR(20) NOT NULL DEFAULT 'pending'"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ------------------------------------------------------------------
@@ -53,6 +64,7 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_add_missing_columns)
         logger.info("Database tables ready")
     except Exception as exc:
         logger.error("Failed to create database tables", error=str(exc))
@@ -117,6 +129,16 @@ async def log_requests(request: Request, call_next):
 
 
 # Global exception handler — never expose internal details
+@app.exception_handler(ValueError)
+async def domain_rule_handler(request: Request, exc: ValueError):
+    """
+    Domain classes (e.g. Prescription) raise ValueError when a business rule is broken,
+    such as editing an ACTIVE prescription or finalizing one with no medicines.
+    That is the user's mistake, not a server crash, so answer 400 with the reason.
+    """
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error("unhandled_exception", error=str(exc), path=request.url.path)

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Clock, AlertCircle, Info, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -6,6 +7,7 @@ import type { Notification } from '../types';
 import EmptyState from '../components/ui/EmptyState';
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,7 +57,7 @@ export default function NotificationsPage() {
       case 'high':
         return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800';
       case 'normal':
-        return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800';
       default:
         return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
     }
@@ -80,7 +82,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Notifications List */}
-      <div className="card divide-y divide-border dark:divide-[#233044]">
+      <div className="card divide-y divide-border dark:divide-[#24352C]">
         {isLoading ? (
           <div className="p-8 space-y-4 animate-pulse">
             {[1, 2, 3].map((i) => (
@@ -93,8 +95,8 @@ export default function NotificationsPage() {
               key={n.id}
               className={`p-4 flex items-start justify-between gap-4 transition-colors ${
                 n.is_read
-                  ? 'bg-white dark:bg-[#131C31]'
-                  : 'bg-teal-50/20 dark:bg-teal-950/10'
+                  ? 'bg-white dark:bg-[#16201B]'
+                  : 'bg-emerald-50/20 dark:bg-emerald-950/10'
               }`}
             >
               <div className="flex items-start gap-3">
@@ -102,7 +104,7 @@ export default function NotificationsPage() {
                   className={`p-2 rounded-lg mt-0.5 ${
                     n.is_read
                       ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                      : 'bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400'
+                      : 'bg-primary/10 text-primary dark:bg-emerald-900/30 dark:text-emerald-400'
                   }`}
                 >
                   <Bell className="w-4 h-4" />
@@ -129,6 +131,14 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
+              {n.action_url && (
+                <button
+                  onClick={() => { if (!n.is_read) markAsRead(n.id); navigate(n.action_url!); }}
+                  className="text-xs font-semibold text-primary hover:underline shrink-0"
+                >
+                  Open
+                </button>
+              )}
               {!n.is_read && (
                 <button
                   onClick={() => markAsRead(n.id)}

@@ -1,3 +1,4 @@
+import MyHealthProfile from '../components/settings/MyHealthProfile';
 import React, { useState } from 'react';
 import { Settings, Lock, User, Shield, Bell, Key, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -63,8 +64,8 @@ export default function SettingsPage() {
           <User className="w-4 h-4 text-primary" /> Profile Information
         </h3>
 
-        <div className="flex items-center gap-4 border-b border-border dark:border-[#233044] pb-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary dark:bg-teal-900/30 dark:text-teal-400 flex items-center justify-center font-bold text-xl">
+        <div className="flex items-center gap-4 border-b border-border dark:border-[#24352C] pb-4">
+          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center font-bold text-xl">
             {user?.first_name?.[0]}
             {user?.last_name?.[0]}
           </div>
@@ -92,6 +93,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {user?.role === 'patient' && user?.id && <MyHealthProfile userId={user.id} />}
 
       {/* Change Password Form */}
       <div className="card p-6 space-y-4">
@@ -153,7 +156,7 @@ export default function SettingsPage() {
         </h3>
 
         <div className="space-y-3 text-xs">
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A] cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17] cursor-pointer">
             <div>
               <span className="font-semibold text-text dark:text-white block">Clinical Status Updates</span>
               <span className="text-text-secondary dark:text-slate-400 text-[11px]">
@@ -168,7 +171,7 @@ export default function SettingsPage() {
             />
           </label>
 
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#233044] bg-slate-50/50 dark:bg-[#0F172A] cursor-pointer">
+          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17] cursor-pointer">
             <div>
               <span className="font-semibold text-text dark:text-white block">Medication Dosing Reminders</span>
               <span className="text-text-secondary dark:text-slate-400 text-[11px]">

@@ -18,12 +18,15 @@ import { useAuth } from '../context/AuthContext';
 import { prescriptionService } from '../services/prescriptionService';
 import type { PrescriptionDetail } from '../types';
 import Badge from '../components/ui/Badge';
+import PharmacyPanel from '../components/prescriptions/PharmacyPanel';
+import EditDraftModal from '../components/prescriptions/EditDraftModal';
 
 export default function PrescriptionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [prescription, setPrescription] = useState<PrescriptionDetail | null>(null);
+  const [editingDraft, setEditingDraft] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchPrescription = async () => {
@@ -102,7 +105,7 @@ export default function PrescriptionDetailsPage() {
       <div className="no-print flex items-center justify-between">
         <button
           onClick={() => navigate('/prescriptions')}
-          className="flex items-center gap-1.5 text-xs text-text-secondary dark:text-slate-300 hover:text-text dark:hover:text-white p-2 rounded-lg border border-border dark:border-[#233044] bg-white dark:bg-[#162238] transition-colors"
+          className="flex items-center gap-1.5 text-xs text-text-secondary dark:text-slate-300 hover:text-text dark:hover:text-white p-2 rounded-lg border border-border dark:border-[#24352C] bg-white dark:bg-[#1C2922] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Prescriptions
         </button>
@@ -115,6 +118,12 @@ export default function PrescriptionDetailsPage() {
           >
             <Printer className="w-3.5 h-3.5" /> Print Prescription
           </button>
+
+          {user?.role === 'doctor' && prescription.status === 'draft' && (
+            <button onClick={() => setEditingDraft(true)} className="btn-secondary text-xs">
+              Edit draft
+            </button>
+          )}
 
           {user?.role === 'doctor' && prescription.status === 'draft' && (
             <button
@@ -137,9 +146,9 @@ export default function PrescriptionDetailsPage() {
       </div>
 
       {/* Main Prescription Card (Printable) */}
-      <div className="card p-8 bg-white dark:bg-[#131C31] border border-border dark:border-[#233044] shadow-sm print:border-none print:shadow-none space-y-6">
+      <div className="card p-8 bg-white dark:bg-[#16201B] border border-border dark:border-[#24352C] shadow-sm print:border-none print:shadow-none space-y-6">
         {/* Header Branding */}
-        <div className="flex items-start justify-between border-b border-border dark:border-[#233044] pb-6">
+        <div className="flex items-start justify-between border-b border-border dark:border-[#24352C] pb-6">
           <div className="flex items-center gap-3">
             <img src="/logo.svg" alt="ArogyaNova Logo" className="w-10 h-10" />
             <div>
@@ -161,9 +170,9 @@ export default function PrescriptionDetailsPage() {
         </div>
 
         {/* Clinical Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50/70 dark:bg-[#0F172A]/70 border border-border dark:border-[#233044] text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50/70 dark:bg-[#121B17]/70 border border-border dark:border-[#24352C] text-xs">
           <div>
-            <span className="text-[10px] font-bold text-primary dark:text-teal-400 uppercase tracking-wider block mb-1">
+            <span className="text-[10px] font-bold text-primary dark:text-emerald-400 uppercase tracking-wider block mb-1">
               PATIENT DETAILS
             </span>
             <p className="font-bold text-sm text-text dark:text-white">
@@ -187,7 +196,7 @@ export default function PrescriptionDetailsPage() {
           </div>
 
           <div>
-            <span className="text-[10px] font-bold text-primary dark:text-teal-400 uppercase tracking-wider block mb-1">
+            <span className="text-[10px] font-bold text-primary dark:text-emerald-400 uppercase tracking-wider block mb-1">
               PRESCRIBER DETAILS
             </span>
             <p className="font-bold text-sm text-text dark:text-white">
@@ -208,7 +217,7 @@ export default function PrescriptionDetailsPage() {
         </div>
 
         {/* Diagnosis & Dates */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs border-b border-border dark:border-[#233044] pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs border-b border-border dark:border-[#24352C] pb-4">
           <div>
             <span className="text-text-secondary dark:text-slate-400 block">Issue Date</span>
             <span className="font-semibold text-text dark:text-white">{prescription.issue_date}</span>
@@ -232,9 +241,9 @@ export default function PrescriptionDetailsPage() {
           <h3 className="text-xs font-bold text-text dark:text-white uppercase tracking-wider mb-3">
             Rx — Prescribed Medications ({prescription.items?.length || 0})
           </h3>
-          <div className="overflow-x-auto border border-border dark:border-[#233044] rounded-lg">
+          <div className="overflow-x-auto border border-border dark:border-[#24352C] rounded-lg">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 border-b border-border dark:border-[#233044] uppercase text-[10px]">
+              <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 border-b border-border dark:border-[#24352C] uppercase text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">#</th>
                   <th className="py-2.5 px-3">Medication &amp; Strength</th>
@@ -244,9 +253,9 @@ export default function PrescriptionDetailsPage() {
                   <th className="py-2.5 px-3">Instructions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-[#233044]">
+              <tbody className="divide-y divide-border dark:divide-[#24352C]">
                 {prescription.items?.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50/30 dark:hover:bg-[#162238] transition-colors">
+                  <tr key={item.id} className="hover:bg-slate-50/30 dark:hover:bg-[#1C2922] transition-colors">
                     <td className="py-3 px-3 text-text-secondary dark:text-slate-400">{idx + 1}</td>
                     <td className="py-3 px-3 font-semibold text-text dark:text-white">
                       {item.medication?.generic_name || 'Medication'}{' '}
@@ -255,7 +264,7 @@ export default function PrescriptionDetailsPage() {
                           ({item.medication.brand_name})
                         </span>
                       )}{' '}
-                      <span className="text-primary dark:text-teal-400 font-mono text-[11px] block sm:inline">
+                      <span className="text-primary dark:text-emerald-400 font-mono text-[11px] block sm:inline">
                         {item.strength}
                       </span>
                     </td>
@@ -278,18 +287,18 @@ export default function PrescriptionDetailsPage() {
 
         {/* Clinical Notes */}
         {prescription.clinical_notes && (
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044] text-xs">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C] text-xs">
             <span className="font-semibold text-text dark:text-white block mb-1">Clinical Notes &amp; Advice</span>
             <p className="text-text-secondary dark:text-slate-400 whitespace-pre-wrap">{prescription.clinical_notes}</p>
           </div>
         )}
 
         {/* Doctor Signature & Legal Notice */}
-        <div className="pt-8 border-t border-border dark:border-[#233044] flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+        <div className="pt-8 border-t border-border dark:border-[#24352C] flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
           <div className="text-[10px] text-text-light dark:text-slate-500 max-w-sm">
             <p>
-              * This is a cryptographically signed electronic prescription issued through ArogyaNova.
-              Authorized under Object-Oriented Prescription Protocol. Tampering invalidates this record.
+              * Electronic prescription issued through ArogyaNova by the doctor named below.
+              Every change to it is recorded in the system's audit log. Quote the prescription ID to verify it.
             </p>
           </div>
           <div className="text-right sm:min-w-48 border-t border-slate-300 dark:border-slate-700 pt-2">
@@ -300,6 +309,11 @@ export default function PrescriptionDetailsPage() {
           </div>
         </div>
       </div>
+      {/* Pharmacy verification & dispensing */}
+      <PharmacyPanel prescription={prescription} role={user?.role} onUpdated={setPrescription} />
+      {editingDraft && (
+        <EditDraftModal prescription={prescription} isOpen={editingDraft} onClose={() => setEditingDraft(false)} onSaved={setPrescription} />
+      )}
     </div>
   );
 }

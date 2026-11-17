@@ -8,14 +8,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#F7F9FC',
+        background: '#F5FAF6',
         surface: '#FFFFFF',
         primary: {
-          DEFAULT: '#0F9F91',
-          hover: '#0B8278',
-          light: '#E6F7F5',
+          DEFAULT: '#4FA67A',
+          hover: '#3E8C64',
+          light: '#E7F4EC',
         },
-        secondary: '#6BA8E5',
+        secondary: '#7CC4A0',
         lavender: '#EEE9FF',
         text: {
           DEFAULT: '#172B3A',
@@ -23,10 +23,10 @@ export default {
           light: '#94A3B8',
         },
         border: '#E5EAF0',
-        darkbg: '#0B132B',
-        darksurface: '#131C31',
-        darkcard: '#162238',
-        darkborder: '#233044',
+        darkbg: '#0F1714',
+        darksurface: '#16201B',
+        darkcard: '#1C2922',
+        darkborder: '#24352C',
         success: {
           DEFAULT: '#15803D',
           light: '#DCFCE7',

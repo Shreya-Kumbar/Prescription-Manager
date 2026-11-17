@@ -215,7 +215,7 @@ export default function CreatePrescriptionPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/prescriptions')}
-            className="p-2 rounded-lg border border-border dark:border-[#233044] bg-white dark:bg-[#162238] text-text-secondary dark:text-slate-300 hover:text-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg border border-border dark:border-[#24352C] bg-white dark:bg-[#1C2922] text-text-secondary dark:text-slate-300 hover:text-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -256,7 +256,7 @@ export default function CreatePrescriptionPage() {
 
       {/* 1. Patient Selection */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400 border-b border-border dark:border-[#233044] pb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-emerald-400 border-b border-border dark:border-[#24352C] pb-2">
           1. Patient Information
         </h3>
 
@@ -288,7 +288,7 @@ export default function CreatePrescriptionPage() {
         </div>
 
         {selectedPatient && (
-          <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044] text-xs flex flex-wrap gap-4 text-text-secondary dark:text-slate-300">
+          <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C] text-xs flex flex-wrap gap-4 text-text-secondary dark:text-slate-300">
             <span><strong className="text-text dark:text-white">Name:</strong> {selectedPatient.first_name} {selectedPatient.last_name}</span>
             <span><strong className="text-text dark:text-white">DOB:</strong> {selectedPatient.patient_profile?.date_of_birth || 'Not recorded'}</span>
             <span><strong className="text-text dark:text-white">Blood Group:</strong> {selectedPatient.patient_profile?.blood_group || 'O+'}</span>
@@ -299,7 +299,7 @@ export default function CreatePrescriptionPage() {
 
       {/* 2. Clinical Evaluation */}
       <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400 border-b border-border dark:border-[#233044] pb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-emerald-400 border-b border-border dark:border-[#24352C] pb-2">
           2. Clinical Information &amp; Diagnosis
         </h3>
 
@@ -340,8 +340,8 @@ export default function CreatePrescriptionPage() {
 
       {/* 3. Medication Builder */}
       <div className="card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-border dark:border-[#233044] pb-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-teal-400">
+        <div className="flex items-center justify-between border-b border-border dark:border-[#24352C] pb-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-emerald-400">
             3. Medication Builder ({items.length} line items)
           </h3>
           <div className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export default function CreatePrescriptionPage() {
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl border border-border dark:border-[#233044] bg-slate-50/40 dark:bg-[#0F172A]/60 space-y-3 relative"
+              className="p-4 rounded-xl border border-border dark:border-[#24352C] bg-slate-50/40 dark:bg-[#121B17]/60 space-y-3 relative"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-text-secondary dark:text-slate-400">
@@ -535,7 +535,7 @@ export default function CreatePrescriptionPage() {
         maxWidth="xl"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-border dark:border-[#233044]">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
             <p className="font-semibold text-text dark:text-white text-sm">
               Patient: {selectedPatient ? `${selectedPatient.first_name} ${selectedPatient.last_name}` : 'Not selected'}
             </p>
@@ -544,14 +544,14 @@ export default function CreatePrescriptionPage() {
           </div>
 
           <table className="w-full text-left">
-            <thead className="border-b border-border dark:border-[#233044] text-text-secondary dark:text-slate-400">
+            <thead className="border-b border-border dark:border-[#24352C] text-text-secondary dark:text-slate-400">
               <tr>
                 <th className="py-2">Medication</th>
                 <th className="py-2">Dosage &amp; Frequency</th>
                 <th className="py-2">Duration</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border dark:divide-[#233044]">
+            <tbody className="divide-y divide-border dark:divide-[#24352C]">
               {items.map((item, idx) => (
                 <tr key={idx}>
                   <td className="py-2 font-medium text-text dark:text-white">
@@ -568,7 +568,7 @@ export default function CreatePrescriptionPage() {
             </tbody>
           </table>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-[#233044]">
+          <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-[#24352C]">
             <button onClick={() => setShowPreview(false)} className="btn-secondary text-xs">
               Close Preview
             </button>

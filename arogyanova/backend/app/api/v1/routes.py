@@ -21,6 +21,7 @@ from app.models.models import (
     DoctorProfileModel, PatientProfileModel, PharmacistProfileModel,
 )
 from app.schemas.schemas import (
+    AdminCreateUser,
     AdminUserUpdate, AuditLogResponse, DashboardStatsResponse,
     InteractionCheckRequest, InteractionCheckResponse, LogMedicationRequest,
     MedicationCreate, MedicationResponse, MedicationUpdate,
@@ -102,6 +103,7 @@ async def update_patient_profile(
     current_user: Annotated[UserModel, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MessageResponse:
+    # Only the patient themself or an administrator may change a patient's personal details.
     if current_user.id != patient_id and current_user.role != UserRole.ADMINISTRATOR.value:
         raise HTTPException(status_code=403, detail="Access denied.")
 
@@ -155,8 +157,8 @@ async def create_medication(
     current_user: Annotated[UserModel, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MedicationResponse:
-    if current_user.role != UserRole.ADMINISTRATOR.value:
-        raise HTTPException(status_code=403, detail="Only administrators can add medications.")
+    if current_user.role not in (UserRole.PHARMACIST.value, UserRole.ADMINISTRATOR.value):
+        raise HTTPException(status_code=403, detail="Only pharmacists and administrators can add medications.")
 
     # Duplicate check
     existing = await db.execute(
@@ -183,8 +185,8 @@ async def update_medication(
     current_user: Annotated[UserModel, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MedicationResponse:
-    if current_user.role != UserRole.ADMINISTRATOR.value:
-        raise HTTPException(status_code=403, detail="Only administrators can update medications.")
+    if current_user.role not in (UserRole.PHARMACIST.value, UserRole.ADMINISTRATOR.value):
+        raise HTTPException(status_code=403, detail="Only pharmacists and administrators can update medications.")
 
     result = await db.execute(select(MedicationModel).where(MedicationModel.id == medication_id))
     med = result.scalar_one_or_none()
@@ -260,6 +262,21 @@ async def log_medication(
     schedule = result.scalar_one_or_none()
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule entry not found.")
+
+    # A dose can only be logged on or after the day it is scheduled for.
+    scheduled = schedule.scheduled_at
+    if scheduled.tzinfo is not None:
+        scheduled = scheduled.astimezone().replace(tzinfo=None)
+    if scheduled.date() > datetime.now().date():
+        raise HTTPException(
+            status_code=400,
+            detail=f"This dose is scheduled for {scheduled.strftime('%d %b')}. You can log it on that day.",
+        )
+
+    # Each dose is logged once.
+    already = await db.execute(select(MedicationLogModel.id).where(MedicationLogModel.schedule_id == schedule_id))
+    if already.first():
+        raise HTTPException(status_code=400, detail="This dose has already been logged.")
 
     log = MedicationLogModel(
         schedule_id=schedule_id,
@@ -419,12 +436,18 @@ async def get_dashboard(
         }
 
     elif role == UserRole.PHARMACIST.value:
-        pending = (await db.execute(
-            select(func.count()).where(PrescriptionModel.status == "active")
-        )).scalar_one()
+        rows = (await db.execute(
+            select(PrescriptionModel.pharmacy_status, func.count())
+            .where(PrescriptionModel.status == "active")
+            .group_by(PrescriptionModel.pharmacy_status)
+        )).all()
+        by_status = {k: v for k, v in rows}
         stats = {
-            "prescriptions_pending_review": pending,
-            "total_reviewed": 0,
+            "prescriptions_pending_review": by_status.get("pending", 0),
+            "ready_to_dispense": by_status.get("verified", 0),
+            "flagged": by_status.get("flagged", 0),
+            "dispensed": by_status.get("dispensed", 0),
+            "total_reviewed": sum(v for k, v in by_status.items() if k != "pending"),
         }
 
     elif role == UserRole.ADMINISTRATOR.value:
@@ -480,11 +503,38 @@ async def analytics_overview(
         day = p.issue_date.isoformat()
         by_date[day] = by_date.get(day, 0) + 1
 
+    # --- Medication adherence from real dose logs (taken vs skipped) ---
+    logs_q = select(MedicationLogModel.action, MedicationLogModel.logged_at)
+    if current_user.role == UserRole.DOCTOR.value:
+        my_patients = select(PrescriptionModel.patient_id).where(PrescriptionModel.doctor_id == current_user.id)
+        logs_q = logs_q.where(MedicationLogModel.patient_id.in_(my_patients))
+    logs = (await db.execute(logs_q)).all()
+    taken_total = sum(1 for a, _ in logs if a == "taken")
+    adherence_rate = round(taken_total / len(logs) * 100, 1) if logs else None
+
+    today = datetime.now(timezone.utc).date()
+    week = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        day_logs = [a for a, t in logs if t and t.date() == d]
+        taken = sum(1 for a in day_logs if a == "taken")
+        week.append({
+            "day": d.strftime("%a"),
+            "date": d.isoformat(),
+            "taken": taken,
+            "total": len(day_logs),
+            "rate": round(taken / len(day_logs) * 100, 1) if day_logs else None,
+        })
+
     return {
         "period_days": days,
         "total": len(prescriptions),
         "status_distribution": status_dist,
         "prescriptions_by_date": by_date,
+        "adherence_rate": adherence_rate,
+        "doses_logged": len(logs),
+        "doses_taken": taken_total,
+        "adherence_by_day": week,
     }
 
 
@@ -523,6 +573,21 @@ async def admin_list_users(
     q = q.offset((page - 1) * per_page).limit(per_page)
     rows = (await db.execute(q)).scalars().all()
     return [UserDetailResponse.model_validate(u) for u in rows]
+
+
+@admin_router.post("/users", response_model=UserDetailResponse, status_code=201)
+async def admin_create_user(
+    body: AdminCreateUser,
+    request: Request,
+    current_user: Annotated[UserModel, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> UserDetailResponse:
+    """Administrators create doctor, pharmacist (or patient/admin) accounts."""
+    if current_user.role != UserRole.ADMINISTRATOR.value:
+        raise HTTPException(status_code=403, detail="Only administrators can create staff accounts.")
+    from app.api.v1.auth import _load_user_with_profiles, create_user_account
+    user = await create_user_account(db, body, request.client.host if request.client else None, actor_id=current_user.id)
+    return UserDetailResponse.model_validate(await _load_user_with_profiles(db, user.id))
 
 
 @admin_router.patch("/users/{user_id}", response_model=UserDetailResponse)

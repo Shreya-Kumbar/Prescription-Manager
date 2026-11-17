@@ -14,7 +14,7 @@
   }
 
   html.dark body {
-    background-color: #0B132B;
+    background-color: #0F1714;
     color: #F1F5F9;
   }
 
@@ -23,7 +23,7 @@
   }
 
   html.dark * {
-    border-color: #233044;
+    border-color: #24352C;
   }
 }
 
@@ -35,8 +35,8 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#162238] text-text dark:text-[#F1F5F9] font-medium rounded-lg
-    border border-border dark:border-[#233044] hover:bg-background dark:hover:bg-[#1F2D48] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1C2922] text-text dark:text-[#F1F5F9] font-medium rounded-lg
+    border border-border dark:border-[#24352C] hover:bg-background dark:hover:bg-[#22352B] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
     transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -48,12 +48,12 @@
 
   .btn-ghost {
     @apply inline-flex items-center gap-2 px-3 py-2 text-text-secondary dark:text-slate-400 font-medium rounded-lg
-    hover:bg-background dark:hover:bg-[#162238] hover:text-text dark:hover:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+    hover:bg-background dark:hover:bg-[#1C2922] hover:text-text dark:hover:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
     transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-border dark:border-[#233044] rounded-lg text-sm text-text dark:text-[#F1F5F9] bg-white dark:bg-[#0F172A]
+    @apply w-full px-3 py-2 border border-border dark:border-[#24352C] rounded-lg text-sm text-text dark:text-[#F1F5F9] bg-white dark:bg-[#121B17]
     focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
     placeholder:text-text-light dark:placeholder:text-slate-500 transition-colors duration-150
     disabled:bg-background dark:disabled:bg-slate-900 disabled:cursor-not-allowed;
@@ -64,7 +64,7 @@
   }
 
   .card {
-    @apply bg-white dark:bg-[#131C31] rounded-card border border-border dark:border-[#233044] shadow-card transition-colors duration-200;
+    @apply bg-white dark:bg-[#16201B] rounded-card border border-border dark:border-[#24352C] shadow-card transition-colors duration-200;
   }
 
   .badge-draft {
@@ -93,11 +93,11 @@
 
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary dark:text-slate-300
-    hover:bg-primary-light dark:hover:bg-primary/20 hover:text-primary dark:hover:text-teal-400 transition-colors duration-150 cursor-pointer;
+    hover:bg-primary-light dark:hover:bg-primary/20 hover:text-primary dark:hover:text-emerald-300 transition-colors duration-150 cursor-pointer;
   }
 
   .nav-item.active {
-    @apply bg-primary-light dark:bg-primary/25 text-primary dark:text-teal-300 font-semibold;
+    @apply bg-primary-light dark:bg-primary/25 text-primary dark:text-emerald-200 font-semibold;
   }
 }
 
@@ -133,3 +133,292 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     display: block !important;
   }
 }
+
+/* =====================================================================
+   Visual polish: calm background, solid cards, subtle motion
+   ===================================================================== */
+
+/* ---- Background (plain, no glowing blobs) ---- */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, #F5FAF6 0%, #EEF6F0 100%);
+}
+html.dark .aurora { background: #0F1714; }
+.aurora span { display: none; }
+
+/* ---- Cards ---- */
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card:hover { box-shadow: 0 6px 18px -10px rgba(15, 23, 42, 0.18); }
+html.dark .card {
+  background-color: #16201B;
+  border-color: #24352C;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+html.dark .card:hover { border-color: #2E4538; box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.6); }
+
+/* Gentle lift for small cards in grids (stat tiles, patient cards) */
+.grid > .card:hover { transform: translateY(-2px); }
+
+/* ---- Page entrance: fade + rise, children staggered ---- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-enter > * { animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter > * > * { animation: fadeUp 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter > * > *:nth-child(2) { animation-delay: 0.05s; }
+.page-enter > * > *:nth-child(3) { animation-delay: 0.1s; }
+.page-enter > * > *:nth-child(4) { animation-delay: 0.15s; }
+.page-enter > * > *:nth-child(n+5) { animation-delay: 0.2s; }
+.page-enter .grid > * { animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter .grid > *:nth-child(2) { animation-delay: 0.05s; }
+.page-enter .grid > *:nth-child(3) { animation-delay: 0.1s; }
+.page-enter .grid > *:nth-child(n+4) { animation-delay: 0.15s; }
+
+.auth-enter > * { animation: fadeUp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.auth-enter > *:nth-child(3) { animation-delay: 0.08s; }
+
+/* ---- Buttons: solid, no glow ---- */
+.btn-primary {
+  background-color: #4FA67A;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover:not(:disabled) { background-color: #3E8C64; box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.35); }
+html.dark .btn-primary { background-color: #4FA67A; }
+html.dark .btn-primary:hover:not(:disabled) { background-color: #5FB88A; }
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.btn-danger:active:not(:disabled) { transform: scale(0.97); }
+.btn-secondary, .btn-danger { transition: transform 0.15s ease, background-color 0.15s ease; }
+html.dark .btn-secondary { background-color: #1C2922; }
+
+/* ---- Inputs ---- */
+.input:focus { box-shadow: 0 0 0 3px rgba(79, 166, 122, 0.18); }
+html.dark .input { background-color: #121B17; }
+
+/* ---- Tables ---- */
+tbody tr { transition: background-color 0.15s ease; }
+tbody tr:hover { background-color: rgba(15, 23, 42, 0.03); }
+html.dark tbody tr:hover { background-color: rgba(255, 255, 255, 0.03); }
+
+/* ---- Skeleton shimmer ---- */
+.skeleton { position: relative; overflow: hidden; }
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: shimmer 1.4s infinite;
+}
+html.dark .skeleton::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent); }
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* ---- Brand text (solid colour, not gradient) ---- */
+.text-gradient { color: #3E8C64; }
+html.dark .text-gradient { color: #7CC4A0; }
+
+/* ---- Icon hover ---- */
+.icon-tile, .nav-icon { transition: transform 0.25s ease; }
+.card:hover .icon-tile, .nav-link:hover .nav-icon { transform: scale(1.06); }
+
+/* ---- Floating logo (subtle) ---- */
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.float { animation: floaty 4s ease-in-out infinite; }
+
+/* ---- Toasts follow the theme ---- */
+html.dark .toast-themed {
+  background: #1C2922 !important;
+  color: #E2E8F0 !important;
+  border: 1px solid #24352C !important;
+}
+
+/* ---- Respect users who prefer less motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* =====================================================================
+   Motion and hover effects (smooth, no glow)
+   ===================================================================== */
+
+/* Cards: lift with a soft shadow */
+.card { transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s ease, border-color 0.2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(30, 64, 110, 0.35); border-color: #CFE6D8; }
+html.dark .card:hover { border-color: #2E4538; box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.7); }
+.grid > .card:hover { transform: translateY(-4px); }
+
+/* Card icon tiles: little bounce */
+.card:hover .icon-tile { animation: iconBounce 0.5s ease; }
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-4px) scale(1.08); }
+  70% { transform: translateY(1px) scale(0.98); }
+}
+
+/* Sidebar: label slides, icon tilts */
+.nav-link span:last-child { transition: transform 0.2s ease; }
+.nav-link:hover span:last-child { transform: translateX(3px); }
+.nav-link:hover .nav-icon { transform: scale(1.1) rotate(-8deg); }
+.nav-link:active { transform: scale(0.98); }
+
+/* Buttons: lift, press, and the icon inside nudges right */
+.btn-primary, .btn-secondary, .btn-danger, .btn-ghost { transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.15s ease; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 18px -8px rgba(79, 166, 122, 0.55); }
+.btn-secondary:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-primary svg, .btn-secondary svg { transition: transform 0.2s ease; }
+.btn-primary:hover svg, .btn-secondary:hover svg { transform: translateX(1px) scale(1.15); }
+.btn-primary:active:not(:disabled), .btn-secondary:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+/* Button click ripple-like pulse */
+.btn-primary { position: relative; overflow: hidden; }
+.btn-primary::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 60%);
+  opacity: 0; transform: scale(0.3); transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.btn-primary:active::after { opacity: 1; transform: scale(1.4); transition: 0s; }
+
+/* Table rows: highlight + accent bar slides in */
+tbody tr { transition: background-color 0.18s ease, box-shadow 0.18s ease; }
+tbody tr:hover { background-color: rgba(79, 166, 122, 0.05); box-shadow: inset 3px 0 0 #4FA67A; }
+html.dark tbody tr:hover { background-color: rgba(124, 196, 160, 0.06); box-shadow: inset 3px 0 0 #7CC4A0; }
+
+/* Links: underline grows from the left */
+a.text-primary, a.font-semibold.text-primary { background-image: linear-gradient(currentColor, currentColor); background-size: 0% 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size 0.25s ease; }
+a.text-primary:hover, a.font-semibold.text-primary:hover { background-size: 100% 1px; text-decoration: none; }
+
+/* Badges: pop on hover, live dot breathes */
+.badge-anim { transition: transform 0.2s ease; }
+.badge-anim:hover { transform: scale(1.06); }
+.dot-live { animation: dotPulse 2s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 166, 122, 0.45); }
+  50% { box-shadow: 0 0 0 4px rgba(79, 166, 122, 0); }
+}
+.badge-anim .dot-live { animation-name: dotPulseCurrent; }
+@keyframes dotPulseCurrent { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.35); } }
+
+/* Notification bell rings on hover */
+.bell-btn:hover svg { animation: bellRing 0.6s ease; transform-origin: 50% 0; }
+@keyframes bellRing { 0%,100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+
+/* Inputs: focus ring eases in */
+.input { transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s; }
+.input:hover:not(:focus):not(:disabled) { border-color: #B5D8C2; }
+html.dark .input:hover:not(:focus):not(:disabled) { border-color: #33503F; }
+
+/* Theme toggle spins a little */
+button[title*="mode" i] svg, button[aria-label*="theme" i] svg { transition: transform 0.4s ease; }
+button[title*="mode" i]:hover svg, button[aria-label*="theme" i]:hover svg { transform: rotate(40deg); }
+
+/* Welcome banner: soft light sweep every few seconds */
+.page-enter .card.bg-gradient-to-r { position: relative; overflow: hidden; }
+.page-enter .card.bg-gradient-to-r::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -50%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: sweep 6s ease-in-out 1s infinite;
+}
+html.dark .page-enter .card.bg-gradient-to-r::after { background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.05), transparent); }
+@keyframes sweep { 0% { left: -50%; } 35%, 100% { left: 120%; } }
+
+/* =====================================================================
+   Top bar icons + stat card icon tiles: hover animations
+   ===================================================================== */
+
+/* Every top-bar control lifts slightly */
+.topbar-actions > * { transition: transform 0.2s ease; }
+.topbar-actions > *:hover { transform: translateY(-2px); }
+
+/* Theme toggle: sun spins, moon swings */
+.theme-btn:hover .theme-sun { animation: sunSpin 0.8s cubic-bezier(0.3, 1.4, 0.5, 1); }
+@keyframes sunSpin { from { transform: rotate(0) scale(1); } 50% { transform: rotate(120deg) scale(1.2); } to { transform: rotate(180deg) scale(1); } }
+.theme-btn:hover .theme-moon { animation: moonSwing 0.8s ease; }
+@keyframes moonSwing { 0%, 100% { transform: rotate(-12deg); } 30% { transform: rotate(18deg) scale(1.1); } 60% { transform: rotate(-20deg); } }
+.theme-btn:active { transform: scale(0.9) !important; }
+
+/* Bell: tinted background while it rings */
+.bell-btn:hover { background-color: rgba(79, 166, 122, 0.1) !important; color: #4FA67A !important; }
+html.dark .bell-btn:hover { background-color: rgba(124, 196, 160, 0.12) !important; color: #9ED3B6 !important; }
+
+/* Avatar: grows with a ring */
+.user-avatar { transition: transform 0.25s cubic-bezier(0.3, 1.5, 0.5, 1), box-shadow 0.25s ease; }
+.user-btn:hover .user-avatar { transform: scale(1.12); box-shadow: 0 0 0 3px rgba(79, 166, 122, 0.25); }
+
+/* Stat card icon tiles (blocks on the right of each card) */
+.icon-tile { transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s ease; }
+.icon-tile svg { transition: transform 0.3s ease; }
+.card:hover .icon-tile { animation: none; transform: translateY(-3px) scale(1.08); }
+.card:hover .icon-tile svg { animation: iconWiggle 0.6s ease; }
+.icon-tile:hover { transform: translateY(-3px) scale(1.15) rotate(-6deg) !important; }
+@keyframes iconWiggle { 0%, 100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-12deg) scale(1.1); } 50% { transform: rotate(10deg) scale(1.1); } 75% { transform: rotate(-5deg); } }
+
+/* =====================================================================
+   Print: only the page content (e.g. the prescription), clean and static
+   ===================================================================== */
+@media print {
+  @page { margin: 14mm; }
+  html, body { background: #fff !important; }
+  .no-print, .Toaster, [data-rht-toaster] { display: none !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .card { box-shadow: none !important; transform: none !important; backdrop-filter: none !important; background: #fff !important; }
+  a { background-image: none !important; }
+}
+
+/* =====================================================================
+   Login page: deep green hero + glass card
+   ===================================================================== */
+.login-bg { background: linear-gradient(135deg, #0D241B 0%, #123426 45%, #0E2B21 75%, #16402F 100%); }
+.login-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+}
+.login-glow { position: absolute; border-radius: 9999px; filter: blur(100px); pointer-events: none; animation: auroraFloat 24s ease-in-out infinite alternate; }
+.login-glow-1 { width: 520px; height: 520px; right: -120px; top: -160px; background: rgba(110, 196, 150, 0.22); }
+.login-glow-2 { width: 460px; height: 460px; left: -160px; bottom: -180px; background: rgba(125, 185, 222, 0.16); animation-delay: -8s; }
+
+.login-rise { animation: fadeUp 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+.login-tile { transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease; }
+.login-tile:hover { transform: translateY(-4px); background-color: rgba(255, 255, 255, 0.12); border-color: rgba(168, 220, 192, 0.45); }
+.login-tile:hover svg { animation: iconWiggle 0.6s ease; }
+
+.login-card {
+  background: linear-gradient(160deg, rgba(236, 246, 240, 0.92), rgba(214, 234, 223, 0.86));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.login-input {
+  width: 100%; height: 44px; padding: 0 14px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75); border: 1px solid rgba(19, 38, 29, 0.1);
+  color: #13261D; font-size: 15px; outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.login-input:focus { background: #fff; border-color: #4FA67A; box-shadow: 0 0 0 4px rgba(79, 166, 122, 0.18); }
+.login-btn {
+  height: 46px; border-radius: 12px; font-weight: 600; font-size: 16px; color: #fff;
+  background: #4FA67A; transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.2s ease;
+}
+.login-btn:hover:not(:disabled) { background: #43956C; transform: translateY(-1px); box-shadow: 0 10px 22px -10px rgba(47, 125, 87, 0.7); }
+.login-btn:active:not(:disabled) { transform: scale(0.98); }
+.login-btn:disabled { opacity: 0.6; }
+.demo-chip {
+  padding: 5px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; color: #2F7D57;
+  background: #fff; border: 1px solid rgba(47, 125, 87, 0.15);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.demo-chip:hover { transform: translateY(-2px); background: #E7F4EC; }
+.demo-chip-on { background: #4FA67A; color: #fff; border-color: #4FA67A; }
+
+/* Login card: content swaps between sign-in and sign-up with a soft slide */
+@keyframes cardSwap { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.card-swap { animation: cardSwap 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }

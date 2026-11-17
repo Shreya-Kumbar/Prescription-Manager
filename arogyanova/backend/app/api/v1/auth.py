@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 import hashlib
@@ -18,6 +18,7 @@ import secrets
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.domain.notifications import EmailNotificationChannel
@@ -65,25 +66,27 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
     )
 
 
-@router.post("/register", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
-async def register(
-    request: Request,
+async def create_user_account(
+    db: AsyncSession,
     body: RegisterRequest,
-    response: Response,
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> UserDetailResponse:
-    """Register a new user account (doctor, patient, or pharmacist)."""
-    # Check existing email
-    existing = await db.execute(select(UserModel).where(UserModel.email == body.email))
+    ip_address: Optional[str],
+    actor_id: Optional[uuid.UUID] = None,
+) -> UserModel:
+    """
+    Create a user and the profile that matches their role (Factory-style helper).
+    Used by public patient sign-up and by administrators creating staff accounts.
+    """
+    existing = await db.execute(select(UserModel).where(func.lower(UserModel.email) == body.email.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="An account with this email already exists.")
 
-    # Password strength
     errors = validate_password_strength(body.password)
     if errors:
         raise HTTPException(status_code=422, detail="; ".join(errors))
 
-    # Create user
+    if body.role in ("doctor", "pharmacist") and not body.license_number:
+        raise HTTPException(status_code=422, detail=f"License number is required for {body.role}s.")
+
     user = UserModel(
         id=uuid.uuid4(),
         email=body.email,
@@ -95,43 +98,44 @@ async def register(
     )
     db.add(user)
 
-    # Create role-specific profile
     if body.role == "doctor":
-        if not body.license_number:
-            raise HTTPException(status_code=422, detail="License number is required for doctors.")
-        profile = DoctorProfileModel(
-            user_id=user.id,
-            license_number=body.license_number,
-            specialization=body.specialization,
-        )
-        db.add(profile)
+        db.add(DoctorProfileModel(user_id=user.id, license_number=body.license_number, specialization=body.specialization))
     elif body.role == "patient":
-        profile = PatientProfileModel(
-            user_id=user.id,
-            date_of_birth=body.date_of_birth,
-            phone=body.phone,
-        )
-        db.add(profile)
+        db.add(PatientProfileModel(user_id=user.id, date_of_birth=body.date_of_birth, phone=body.phone))
     elif body.role == "pharmacist":
-        if not body.license_number:
-            raise HTTPException(status_code=422, detail="License number is required for pharmacists.")
-        profile = PharmacistProfileModel(
-            user_id=user.id,
-            license_number=body.license_number,
-        )
-        db.add(profile)
+        db.add(PharmacistProfileModel(user_id=user.id, license_number=body.license_number))
 
-    # Audit
-    audit = AuditLogModel(
-        actor_id=user.id,
-        action="user.register",
+    db.add(AuditLogModel(
+        actor_id=actor_id or user.id,
+        action="user.register" if actor_id is None else "admin.user_created",
         resource_type="user",
         resource_id=str(user.id),
-        ip_address=request.client.host if request.client else None,
-    )
-    db.add(audit)
+        details=None if actor_id is None else f"Created {body.role} account {body.email}",
+        ip_address=ip_address,
+    ))
     await db.commit()
     await db.refresh(user)
+    return user
+
+
+@router.post("/register", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    request: Request,
+    body: RegisterRequest,
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> UserDetailResponse:
+    """
+    Public self-registration — PATIENTS ONLY.
+    Doctor and pharmacist accounts must be created by an administrator
+    (POST /admin/users), so nobody can grant themselves prescribing rights.
+    """
+    if body.role != "patient":
+        raise HTTPException(
+            status_code=403,
+            detail="Only patients can sign up. Doctor and pharmacist accounts are created by an administrator.",
+        )
+    user = await create_user_account(db, body, request.client.host if request.client else None)
 
     # Issue tokens
     access_token = create_access_token(user.id, user.role)
@@ -145,9 +149,27 @@ async def register(
     await db.commit()
 
     _set_auth_cookies(response, access_token, raw_refresh)
+    # Reload with profiles eagerly loaded: building the response must not trigger
+    # lazy loads, which fail under async SQLAlchemy (this used to return a 500 even
+    # though the account had already been saved).
+    user = await _load_user_with_profiles(db, user.id)
     resp = UserDetailResponse.model_validate(user)
     resp.access_token = access_token
     return resp
+
+
+async def _load_user_with_profiles(db: AsyncSession, user_id: uuid.UUID) -> UserModel:
+    result = await db.execute(
+        select(UserModel)
+        .options(
+            selectinload(UserModel.doctor_profile),
+            selectinload(UserModel.patient_profile),
+            selectinload(UserModel.pharmacist_profile),
+        )
+        .where(UserModel.id == user_id)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one()
 
 
 @router.post("/login", response_model=UserDetailResponse)

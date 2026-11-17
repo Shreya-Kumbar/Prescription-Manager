@@ -80,11 +80,20 @@ export interface PrescriptionSummary {
   patient?: User;
   doctor?: User;
   item_count: number;
+  pharmacy_status?: 'pending' | 'verified' | 'flagged' | 'dispensed';
+}
+
+export interface PharmacyHistoryEntry {
+  action: 'verify' | 'flag' | 'dispense';
+  notes?: string;
+  pharmacist_name: string;
+  created_at: string;
 }
 
 export interface PrescriptionDetail extends PrescriptionSummary {
   items: PrescriptionItem[];
   clinical_notes?: string;
+  pharmacy_history: PharmacyHistoryEntry[];
 }
 
 export interface PrescriptionListResponse {

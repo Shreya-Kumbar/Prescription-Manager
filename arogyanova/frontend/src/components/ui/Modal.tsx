@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -24,6 +25,14 @@ export default function Modal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Stop the page behind the dialog from scrolling while it is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const maxWidthClasses = {
@@ -34,14 +43,19 @@ export default function Modal({
     '2xl': 'max-w-2xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+  // Rendered into <body> through a portal, so it is always centred on the screen —
+  // animated/transformed page containers can't push it down the page.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div
-        className={`w-full ${maxWidthClasses[maxWidth]} bg-white dark:bg-[#131C31] rounded-card shadow-card-lg border border-border dark:border-[#233044] overflow-hidden text-text dark:text-[#F1F5F9]`}
+        className={`w-full ${maxWidthClasses[maxWidth]} bg-white dark:bg-[#16201B] rounded-card shadow-card-lg border border-border dark:border-[#24352C] overflow-hidden text-text dark:text-[#F1F5F9]`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-[#233044]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-[#24352C]">
           <h3 className="text-base font-semibold text-text dark:text-white">{title}</h3>
           <button
             onClick={onClose}
@@ -50,8 +64,9 @@ export default function Modal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="p-6 max-h-[75vh] overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

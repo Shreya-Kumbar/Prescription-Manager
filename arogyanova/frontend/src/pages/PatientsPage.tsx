@@ -72,7 +72,7 @@ export default function PatientsPage() {
             <div
               key={patient.id}
               onClick={() => navigate(`/patients/${patient.id}`)}
-              className="card p-5 hover:shadow-card-hover cursor-pointer transition-all border border-border dark:border-[#233044] flex flex-col justify-between"
+              className="card p-5 hover:shadow-card-hover cursor-pointer transition-all border border-border dark:border-[#24352C] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between">
@@ -92,7 +92,7 @@ export default function PatientsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-border dark:border-[#233044] space-y-1.5 text-xs text-text-secondary dark:text-slate-400">
+                <div className="mt-4 pt-3 border-t border-border dark:border-[#24352C] space-y-1.5 text-xs text-text-secondary dark:text-slate-400">
                   {patient.patient_profile?.phone && (
                     <p className="flex items-center gap-2">
                       <Phone className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
@@ -114,7 +114,7 @@ export default function PatientsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-border dark:border-[#233044] flex items-center justify-between text-xs text-primary font-semibold">
+              <div className="mt-4 pt-3 border-t border-border dark:border-[#24352C] flex items-center justify-between text-xs text-primary font-semibold">
                 <span>View Full Clinical Record</span>
                 <Eye className="w-4 h-4" />
               </div>

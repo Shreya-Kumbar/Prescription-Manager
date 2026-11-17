@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText,
   Search,
@@ -26,7 +26,10 @@ export default function PrescriptionsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [pharmacyFilter, setPharmacyFilter] = useState('');
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') ?? '');
+  useEffect(() => { setSearchTerm(searchParams.get('search') ?? ''); }, [searchParams]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchPrescriptions = async () => {
@@ -36,6 +39,7 @@ export default function PrescriptionsPage() {
         page,
         per_page: 15,
         status: statusFilter || undefined,
+        pharmacy_status: pharmacyFilter || undefined,
         search: searchTerm || undefined,
       };
       const res = await prescriptionService.list(filters);
@@ -50,7 +54,7 @@ export default function PrescriptionsPage() {
 
   useEffect(() => {
     fetchPrescriptions();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, pharmacyFilter, searchParams]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +143,18 @@ export default function PrescriptionsPage() {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+          <select
+            value={pharmacyFilter}
+            onChange={(e) => { setPharmacyFilter(e.target.value); setPage(1); }}
+            className="input text-xs py-2 w-full md:w-44"
+            aria-label="Pharmacy status"
+          >
+            <option value="">All pharmacy states</option>
+            <option value="pending">Awaiting review</option>
+            <option value="verified">Ready to dispense</option>
+            <option value="flagged">Flagged</option>
+            <option value="dispensed">Dispensed</option>
+          </select>
         </div>
       </div>
 
@@ -152,10 +168,11 @@ export default function PrescriptionsPage() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#0F172A] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#233044]">
+              <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-border dark:border-[#24352C]">
                 <tr>
                   <th className="py-3 px-4">Prescription ID</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Pharmacy</th>
                   <th className="py-3 px-4">Patient</th>
                   <th className="py-3 px-4">Prescriber</th>
                   <th className="py-3 px-4">Issue Date</th>
@@ -163,18 +180,30 @@ export default function PrescriptionsPage() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-[#233044]">
+              <tbody className="divide-y divide-border dark:divide-[#24352C]">
                 {prescriptions.map((p) => (
                   <tr
                     key={p.id}
                     onClick={() => navigate(`/prescriptions/${p.id}`)}
-                    className="hover:bg-teal-50/30 dark:hover:bg-teal-950/20 cursor-pointer transition-colors"
+                    className="hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 cursor-pointer transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-medium text-text dark:text-white">
                       #{p.id.slice(0, 8)}
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge status={p.status} size="sm" />
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {p.status === 'draft' ? (
+                        <span className="text-text-light dark:text-slate-500">—</span>
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${
+                          { pending: 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-200',
+                            verified: 'bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-200',
+                            flagged: 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200',
+                            dispensed: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' }[p.pharmacy_status ?? 'pending']
+                        }`}>{p.pharmacy_status === 'verified' ? 'ready' : p.pharmacy_status ?? 'pending'}</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-text dark:text-white">
@@ -227,20 +256,20 @@ export default function PrescriptionsPage() {
 
           {/* Pagination Controls */}
           {total > 15 && (
-            <div className="p-4 border-t border-border dark:border-[#233044] flex items-center justify-between text-xs text-text-secondary dark:text-slate-400">
+            <div className="p-4 border-t border-border dark:border-[#24352C] flex items-center justify-between text-xs text-text-secondary dark:text-slate-400">
               <span>Showing Page {page}</span>
               <div className="flex items-center gap-2">
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="px-3 py-1 rounded border border-border dark:border-[#233044] disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-border dark:border-[#24352C] disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   disabled={page * 15 >= total}
                   onClick={() => setPage(page + 1)}
-                  className="px-3 py-1 rounded border border-border dark:border-[#233044] disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-border dark:border-[#24352C] disabled:opacity-50"
                 >
                   Next
                 </button>

@@ -12,11 +12,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
+          <div className="aurora no-print" aria-hidden="true"><span /><span /><span /><span /></div>
           <App />
           <Toaster
+            containerClassName="no-print"
             position="top-right"
             toastOptions={{
               duration: 4000,
+              className: 'toast-themed',
               style: {
                 background: '#fff',
                 color: '#172B3A',
@@ -26,7 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 fontSize: '14px',
               },
               success: {
-                iconTheme: { primary: '#0F9F91', secondary: '#fff' },
+                iconTheme: { primary: '#4FA67A', secondary: '#fff' },
               },
               error: {
                 iconTheme: { primary: '#DC2626', secondary: '#fff' },
