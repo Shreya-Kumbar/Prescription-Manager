@@ -42,6 +42,8 @@ class RegisterRequest(BaseModel):
     specialization: Optional[str] = None
     date_of_birth: Optional[date] = None
     phone: Optional[str] = None
+    blood_group: Optional[str] = Field(None, pattern="^(A|B|AB|O)[+-]$")
+    allergies: Optional[str] = Field(None, max_length=500)
 
     @field_validator("role")
     @classmethod
@@ -90,6 +92,7 @@ class UserResponse(BaseModel):
 
 class UserDetailResponse(UserResponse):
     access_token: Optional[str] = None
+    locked_until: Optional[datetime] = None   # set while the account is locked after failed logins
     doctor_profile: Optional[DoctorProfileResponse] = None
     patient_profile: Optional[PatientProfileResponse] = None
     pharmacist_profile: Optional[PharmacistProfileResponse] = None
@@ -209,6 +212,8 @@ class PrescriptionCreate(BaseModel):
     diagnosis: Optional[str] = None
     clinical_notes: Optional[str] = None
     items: List[PrescriptionItemCreate] = Field(default_factory=list)
+    # Set when this is a corrected version of a (flagged) prescription
+    replaces_id: Optional[uuid.UUID] = None
 
 
 class PrescriptionUpdate(BaseModel):
@@ -229,6 +234,9 @@ class PrescriptionSummary(BaseModel):
     doctor: Optional[UserResponse] = None
     item_count: int = 0
     pharmacy_status: str = "pending"
+    cancellation_reason: Optional[str] = None
+    replaces_id: Optional[uuid.UUID] = None
+    replaced_by_id: Optional[uuid.UUID] = None
 
     model_config = {"from_attributes": True}
 
@@ -240,8 +248,12 @@ class PharmacyActionResponse(BaseModel):
     created_at: datetime
 
 
+class CancelRequest(BaseModel):
+    reason: str = Field(..., min_length=3, max_length=500)
+
+
 class PharmacyActionRequest(BaseModel):
-    action: str = Field(..., pattern="^(verify|flag|dispense)$")
+    action: str = Field(..., pattern="^(verify|flag|dispense|respond)$")
     notes: Optional[str] = Field(None, max_length=1000)
 
 
@@ -323,11 +335,11 @@ class AuditLogResponse(BaseModel):
 
 class AdminUserUpdate(BaseModel):
     is_active: Optional[bool] = None
-    role: Optional[str] = Field(None, pattern="^(doctor|patient|pharmacist|administrator)$")
+    role: Optional[str] = Field(None, pattern="^(doctor|patient|pharmacist|administrator|receptionist)$")
 
 
 class AdminCreateUser(RegisterRequest):
-    role: str = Field(..., pattern="^(doctor|patient|pharmacist|administrator)$")
+    role: str = Field(..., pattern="^(doctor|patient|pharmacist|administrator|receptionist)$")
 
     @field_validator("role")
     @classmethod
@@ -358,9 +370,84 @@ class InteractionCheckResponse(BaseModel):
     error_message: Optional[str] = None
 
 
-class OCRResponse(BaseModel):
-    raw_text: str
-    medicines: List[dict]
-    is_available: bool
-    provider: str
-    error_message: Optional[str] = None
+
+
+
+# ---------------------------------------------------------------------------
+# Vitals
+# ---------------------------------------------------------------------------
+
+class VitalsCreate(BaseModel):
+    systolic_bp: Optional[int] = None
+    diastolic_bp: Optional[int] = None
+    pulse: Optional[int] = None
+    spo2: Optional[int] = None
+    temperature_c: Optional[float] = None
+    respiratory_rate: Optional[int] = None
+    weight_kg: Optional[float] = None
+    height_cm: Optional[float] = None
+    notes: Optional[str] = Field(None, max_length=1000)
+
+
+class VitalAlertResponse(BaseModel):
+    level: str
+    message: str
+
+
+class VitalsResponse(VitalsCreate):
+    id: uuid.UUID
+    patient_id: uuid.UUID
+    recorded_by_name: str
+    recorded_by_role: str
+    recorded_at: datetime
+    bmi: Optional[float] = None
+    bmi_category: Optional[str] = None
+    alerts: List[VitalAlertResponse] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Appointments
+# ---------------------------------------------------------------------------
+
+class AppointmentCreate(BaseModel):
+    patient_id: uuid.UUID
+    doctor_id: uuid.UUID
+    scheduled_at: datetime   # clinic local time, must be one of the doctor's free slots
+    reason: str = Field(..., min_length=3, max_length=300)
+
+
+class AppointmentActionRequest(BaseModel):
+    action: str = Field(..., pattern="^(check_in|complete|cancel|no_show)$")
+    reason: Optional[str] = Field(None, max_length=300)
+
+
+class AppointmentResponse(BaseModel):
+    id: uuid.UUID
+    scheduled_at: datetime
+    duration_minutes: int
+    reason: str
+    status: str
+    cancellation_reason: Optional[str] = None
+    patient: Optional[UserResponse] = None
+    doctor: Optional[UserResponse] = None
+    booked_by_name: Optional[str] = None
+    created_at: datetime
+
+
+class SlotResponse(BaseModel):
+    time: datetime
+    available: bool
+
+
+class DaySlotsResponse(BaseModel):
+    doctor_id: uuid.UUID
+    day: date
+    working_day: bool
+    slots: List[SlotResponse]
+
+
+class DoctorOptionResponse(BaseModel):
+    id: uuid.UUID
+    first_name: str
+    last_name: str
+    specialization: Optional[str] = None

@@ -12,6 +12,8 @@ Workflow:
     PENDING ──verify──▶ VERIFIED ──dispense──▶ DISPENSED
        │                   │
        └──flag(reason)──▶ FLAGGED ──verify──▶ VERIFIED
+                             │
+                             └──respond(note) [doctor]──▶ PENDING (re-check)
 """
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ class PharmacyAction(str, Enum):
     VERIFY = "verify"
     FLAG = "flag"
     DISPENSE = "dispense"
+    RESPOND = "respond"  # doctor answers a flag and sends it back for re-check
 
 
 class PharmacyReview:
@@ -37,7 +40,7 @@ class PharmacyReview:
 
     _VALID_TRANSITIONS: dict[PharmacyStatus, list[PharmacyStatus]] = {
         PharmacyStatus.PENDING: [PharmacyStatus.VERIFIED, PharmacyStatus.FLAGGED],
-        PharmacyStatus.FLAGGED: [PharmacyStatus.VERIFIED],
+        PharmacyStatus.FLAGGED: [PharmacyStatus.VERIFIED, PharmacyStatus.PENDING],
         PharmacyStatus.VERIFIED: [PharmacyStatus.DISPENSED, PharmacyStatus.FLAGGED],
         PharmacyStatus.DISPENSED: [],
     }
@@ -76,12 +79,22 @@ class PharmacyReview:
             raise ValueError("Verify the prescription before dispensing it.")
         self._transition_to(PharmacyStatus.DISPENSED)
 
+    def respond(self, note: Optional[str]) -> None:
+        """Doctor keeps the prescription as written, giving a clinical reason; the pharmacist re-checks it."""
+        self._require_active()
+        if self._status != PharmacyStatus.FLAGGED:
+            raise ValueError("Only a flagged prescription needs a response from the doctor.")
+        if not note or len(note.strip()) < 3:
+            raise ValueError("Explain to the pharmacist why the prescription should stay as written.")
+        self._transition_to(PharmacyStatus.PENDING)
+
     def apply(self, action: PharmacyAction, notes: Optional[str] = None) -> PharmacyStatus:
         """Polymorphic entry point used by the API: one call, behaviour chosen by the action."""
         {
             PharmacyAction.VERIFY: lambda: self.verify(),
             PharmacyAction.FLAG: lambda: self.flag(notes),
             PharmacyAction.DISPENSE: lambda: self.dispense(),
+            PharmacyAction.RESPOND: lambda: self.respond(notes),
         }[PharmacyAction(action)]()
         return self._status
 

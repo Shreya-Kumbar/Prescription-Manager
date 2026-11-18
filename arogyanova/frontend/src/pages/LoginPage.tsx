@@ -9,6 +9,7 @@ const DEMO_ACCOUNTS = [
   { label: 'Doctor', email: 'dr.sharma@arogyanova.dev', password: 'Demo@Doctor123' },
   { label: 'Patient', email: 'patient.ravi@arogyanova.dev', password: 'Demo@Patient123' },
   { label: 'Pharmacist', email: 'pharma.anil@arogyanova.dev', password: 'Demo@Pharma123' },
+  { label: 'Receptionist', email: 'reception.meera@arogyanova.dev', password: 'Demo@Reception123' },
   { label: 'Admin', email: 'admin@arogyanova.dev', password: 'Demo@Admin123' },
 ];
 
@@ -83,20 +84,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-bg relative min-h-screen lg:h-screen overflow-x-hidden lg:overflow-hidden text-white">
+    <div className="login-bg relative min-h-screen overflow-x-hidden text-white">
       {/* soft glows + faint grid */}
       <div className="login-grid absolute inset-0 pointer-events-none" aria-hidden="true" />
       <div className="login-glow login-glow-1" aria-hidden="true" />
       <div className="login-glow login-glow-2" aria-hidden="true" />
 
-      <div className="relative z-10 min-h-screen lg:h-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-14 pt-10 lg:pt-12 pb-6 flex flex-col">
+      <div className="login-shell relative z-10 min-h-screen max-w-7xl mx-auto px-6 sm:px-10 lg:px-14 pt-10 lg:pt-12 pb-6 flex flex-col">
         {/* Brand */}
         <div className="flex items-center gap-3 login-rise">
           <img src="/logo.svg" alt="ArogyaNova" className="w-9 h-9 float" />
           <span className="text-2xl font-bold tracking-tight">ArogyaNova</span>
         </div>
 
-        <div className="flex-1 min-h-0 grid lg:grid-cols-2 gap-10 items-center py-6">
+        <div className="flex-1 grid lg:grid-cols-2 gap-10 items-center py-6">
           {/* Hero (left) */}
           <div className="hidden lg:block">
             <span className="login-rise inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 border border-white/15" style={{ animationDelay: '0.05s' }}>
@@ -124,9 +125,14 @@ export default function LoginPage() {
           </div>
 
           {/* Sign-in card (right) */}
-          <div className="login-rise w-full max-w-md lg:justify-self-end" style={{ animationDelay: '0.15s' }}>
+          <div className="login-rise relative z-20 w-full max-w-md lg:justify-self-end" style={{ animationDelay: '0.15s' }}>
             <div className="login-card rounded-[28px] p-7 sm:p-8 text-[#13261D]">
-              <div key={mode} className="card-swap">
+              <div className="auth-tabs" role="tablist" aria-label="Sign in or create an account">
+                <span className={`auth-tabs-pill ${mode === 'signup' ? 'is-right' : ''}`} aria-hidden="true" />
+                <button type="button" role="tab" aria-selected={mode === 'signin'} onClick={() => switchMode('signin')} className={mode === 'signin' ? 'is-active' : ''}>Sign in</button>
+                <button type="button" role="tab" aria-selected={mode === 'signup'} onClick={() => switchMode('signup')} className={mode === 'signup' ? 'is-active' : ''}>Create account</button>
+              </div>
+              <div key={mode} className={mode === 'signup' ? 'card-swap-right' : 'card-swap-left'}>
                 {mode === 'signin' ? (
                   <>
               <h2 className="text-3xl font-extrabold tracking-tight">Welcome back!</h2>
@@ -250,7 +256,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-sm text-emerald-50/60 login-rise" style={{ animationDelay: '0.5s' }}>
+        <p className="pointer-events-none text-sm text-emerald-50/60 login-rise" style={{ animationDelay: '0.5s' }}>
           Object-Oriented Methodologies Project · 2026
         </p>
       </div>

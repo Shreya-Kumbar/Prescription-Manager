@@ -30,7 +30,7 @@ export default function MedicationsPage() {
   const toggleMedication = async (m: any) => {
     try {
       await api.patch(`/medications/${m.id}`, { is_active: m.is_active === false });
-      toast.success(m.is_active === false ? `${m.generic_name} restored to the catalogue` : `${m.generic_name} retired — doctors can no longer prescribe it`);
+      toast.success(m.is_active === false ? `${m.generic_name} is back in stock — doctors can prescribe it again` : `${m.generic_name} marked out of stock — doctors will pick an alternative until it is restocked`);
       fetchMedications();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Could not update the medicine.');
@@ -108,7 +108,7 @@ export default function MedicationsPage() {
         <div>
           <h2 className="text-xl font-bold text-text dark:text-white">Medication Catalogue</h2>
           <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-            Verified pharmaceutical formulations and therapeutic categories ({medications.length} items)
+            Medicines doctors can prescribe; mark a medicine out of stock to hide it from new prescriptions until it is restocked ({medications.length} items)
           </p>
         </div>
 
@@ -202,11 +202,11 @@ export default function MedicationsPage() {
                       <div className="flex items-center gap-2">
                         {m.is_active === false ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/[0.05] px-2 py-0.5 rounded-full">
-                            Retired
+                            Out of stock
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                            <Check className="w-3 h-3" /> Available
+                            <Check className="w-3 h-3" /> In stock
                           </span>
                         )}
                         {canManage && (
@@ -214,7 +214,7 @@ export default function MedicationsPage() {
                             onClick={() => toggleMedication(m)}
                             className="text-[11px] font-semibold text-primary hover:underline"
                           >
-                            {m.is_active === false ? 'Restore' : 'Retire'}
+                            {m.is_active === false ? 'Mark in stock' : 'Mark out of stock'}
                           </button>
                         )}
                       </div>

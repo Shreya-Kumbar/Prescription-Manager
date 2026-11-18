@@ -36,9 +36,11 @@ export default function TopBar() {
       case 'schedule':
         return 'Medication Schedule & Adherence';
       case 'ai-review':
-        return 'AI Clinical Review & OCR';
+        return 'AI Interaction Check';
       case 'analytics':
         return 'Analytics & Clinical Reports';
+      case 'appointments':
+        return 'Appointments';
       case 'notifications':
         return 'System Notifications';
       case 'users':
@@ -57,8 +59,8 @@ export default function TopBar() {
       </div>
 
       <div className="topbar-actions flex items-center gap-3 shrink-0">
-        {/* Global search */}
-        <form onSubmit={submitSearch} className="topbar-search hidden md:flex items-center gap-2 h-9 w-64 px-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/80 dark:bg-white/[0.03] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-all">
+        {/* Global search (prescriptions) — not for receptionists, who have no prescription access */}
+        {user?.role !== 'receptionist' && <form onSubmit={submitSearch} className="topbar-search hidden md:flex items-center gap-2 h-9 w-64 px-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/80 dark:bg-white/[0.03] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-all">
           <Search className="w-4 h-4 text-text-light dark:text-slate-500 shrink-0" />
           <input
             value={query}
@@ -66,7 +68,13 @@ export default function TopBar() {
             placeholder="Search prescriptions..."
             className="flex-1 bg-transparent text-sm text-text dark:text-slate-100 placeholder:text-text-light dark:placeholder:text-slate-500 outline-none"
           />
-        </form>
+        </form>}
+
+        {user?.role === 'receptionist' && (
+          <button onClick={() => navigate('/patients?register=1')} className="btn-primary text-sm !py-1.5 whitespace-nowrap shrink-0">
+            <Plus className="w-4 h-4" /> Register patient
+          </button>
+        )}
 
         {user?.role === 'doctor' && (
           <button onClick={() => navigate('/prescriptions/new')} className="btn-primary text-sm !py-1.5 whitespace-nowrap shrink-0">

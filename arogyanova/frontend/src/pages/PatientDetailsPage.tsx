@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import VitalsPanel from '../components/vitals/VitalsPanel';
 import api from '../services/api';
 import type { User as UserType, PrescriptionSummary } from '../types';
 import Badge from '../components/ui/Badge';
@@ -45,7 +46,8 @@ export default function PatientDetailsPage() {
       setIsLoading(true);
       const [patRes, prescRes] = await Promise.all([
         api.get(`/patients/${id}`),
-        api.get(`/prescriptions?patient_id=${id}`),
+        // Receptionists have no access to prescriptions
+        user?.role === 'receptionist' ? Promise.resolve({ data: { items: [] } }) : api.get(`/prescriptions?patient_id=${id}`),
       ]);
       setPatient(patRes.data);
       const prof = patRes.data.patient_profile;
@@ -176,6 +178,13 @@ export default function PatientDetailsPage() {
         {!isEditing ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
+              <span className="text-text-secondary dark:text-slate-400 block">Registered on</span>
+              <span className="font-semibold text-text dark:text-white mt-0.5 block">
+                {new Date(patient.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Date of Birth</span>
               <span className="font-semibold text-text dark:text-white mt-0.5 block">
                 {patient.patient_profile?.date_of_birth || 'Not recorded'}
@@ -185,7 +194,7 @@ export default function PatientDetailsPage() {
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C]">
               <span className="text-text-secondary dark:text-slate-400 block">Blood Group</span>
               <span className="font-semibold text-rose-600 dark:text-rose-400 mt-0.5 block">
-                {patient.patient_profile?.blood_group || 'O+'}
+                {patient.patient_profile?.blood_group || 'Not recorded'}
               </span>
             </div>
 
@@ -280,8 +289,11 @@ export default function PatientDetailsPage() {
         )}
       </div>
 
-      {/* Prescription History for this Patient */}
-      <div className="card overflow-hidden">
+      {/* Vital signs (recorded at check-in) */}
+      <VitalsPanel patientId={patient.id} role={user?.role} />
+
+      {/* Prescription History for this Patient (not shown to receptionists) */}
+      {user?.role !== 'receptionist' && <div className="card overflow-hidden">
         <div className="p-5 border-b border-border dark:border-[#24352C] flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-text dark:text-white text-sm">Clinical Prescription History</h3>
@@ -336,7 +348,7 @@ export default function PatientDetailsPage() {
             description="No prescriptions have been authored for this patient yet."
           />
         )}
-      </div>
+      </div>}
     </div>
   );
 }

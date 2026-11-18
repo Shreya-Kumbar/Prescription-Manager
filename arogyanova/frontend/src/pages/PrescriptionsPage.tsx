@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { rxNo } from '../utils/rxNumber';
 import { prescriptionService, type PrescriptionFilters } from '../services/prescriptionService';
 import type { PrescriptionSummary } from '../types';
 import Badge from '../components/ui/Badge';
@@ -27,6 +28,9 @@ export default function PrescriptionsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [pharmacyFilter, setPharmacyFilter] = useState('');
+  const [scope, setScope] = useState<'mine' | 'all'>('mine');
+  // Pharmacy workflow details matter to pharmacists and admins; doctors only need to know about flags.
+  const showPharmacy = user?.role === 'pharmacist' || user?.role === 'administrator';
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') ?? '');
   useEffect(() => { setSearchTerm(searchParams.get('search') ?? ''); }, [searchParams]);
@@ -41,6 +45,7 @@ export default function PrescriptionsPage() {
         status: statusFilter || undefined,
         pharmacy_status: pharmacyFilter || undefined,
         search: searchTerm || undefined,
+        scope: user?.role === 'doctor' ? scope : undefined,
       };
       const res = await prescriptionService.list(filters);
       setPrescriptions(res.items);
@@ -54,7 +59,7 @@ export default function PrescriptionsPage() {
 
   useEffect(() => {
     fetchPrescriptions();
-  }, [page, statusFilter, pharmacyFilter, searchParams]);
+  }, [page, statusFilter, pharmacyFilter, scope, searchParams]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,20 +78,6 @@ export default function PrescriptionsPage() {
       fetchPrescriptions();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Failed to finalize prescription.');
-    }
-  };
-
-  const handleCancel = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to cancel this prescription?')) {
-      return;
-    }
-    try {
-      await prescriptionService.cancel(id);
-      toast.success('Prescription cancelled.');
-      fetchPrescriptions();
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to cancel prescription.');
     }
   };
 
@@ -120,12 +111,39 @@ export default function PrescriptionsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by diagnosis or notes..."
+            placeholder="Search by #number, patient, diagnosis…"
             className="input pl-9 text-xs py-2"
           />
         </form>
 
         <div className="w-full md:w-auto flex items-center gap-3">
+          {user?.role === 'doctor' && (
+            <select
+              value={scope}
+              onChange={(e) => { setScope(e.target.value as 'mine' | 'all'); setPage(1); }}
+              className="input text-xs py-2 w-full md:w-40"
+              title="Other doctors' prescriptions are read-only"
+            >
+              <option value="mine">Written by me</option>
+              <option value="all">All doctors</option>
+            </select>
+          )}
+          {user?.role === 'doctor' && (
+            <button
+              onClick={() => {
+                const on = pharmacyFilter !== 'flagged';
+                setPharmacyFilter(on ? 'flagged' : '');
+                setStatusFilter(on ? 'active' : '');
+                setScope('mine');
+                setPage(1);
+              }}
+              className={`text-xs px-3 py-2 rounded-lg border font-semibold whitespace-nowrap ${pharmacyFilter === 'flagged'
+                ? 'bg-rose-600 text-white border-rose-600'
+                : 'border-rose-200 text-rose-700 bg-rose-50 dark:bg-rose-400/10 dark:text-rose-200 dark:border-rose-400/20'}`}
+            >
+              Needs my decision
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-text-secondary dark:text-slate-400 shrink-0" />
             <select
@@ -143,7 +161,7 @@ export default function PrescriptionsPage() {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
-          <select
+          {showPharmacy && <select
             value={pharmacyFilter}
             onChange={(e) => { setPharmacyFilter(e.target.value); setPage(1); }}
             className="input text-xs py-2 w-full md:w-44"
@@ -154,7 +172,7 @@ export default function PrescriptionsPage() {
             <option value="verified">Ready to dispense</option>
             <option value="flagged">Flagged</option>
             <option value="dispensed">Dispensed</option>
-          </select>
+          </select>}
         </div>
       </div>
 
@@ -172,7 +190,7 @@ export default function PrescriptionsPage() {
                 <tr>
                   <th className="py-3 px-4">Prescription ID</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Pharmacy</th>
+                  {showPharmacy && <th className="py-3 px-4">Pharmacy</th>}
                   <th className="py-3 px-4">Patient</th>
                   <th className="py-3 px-4">Prescriber</th>
                   <th className="py-3 px-4">Issue Date</th>
@@ -188,12 +206,29 @@ export default function PrescriptionsPage() {
                     className="hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 cursor-pointer transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-medium text-text dark:text-white">
-                      #{p.id.slice(0, 8)}
+                      {rxNo(p.id)}
+                      {p.replaces_id && (
+                        <span className="block font-sans text-[10px] font-semibold text-amber-700 dark:text-amber-300" title="Corrected version of a flagged prescription">
+                          replaces {rxNo(p.replaces_id)}
+                        </span>
+                      )}
+                      {p.replaced_by_id && (
+                        <span className="block font-sans text-[10px] font-semibold text-text-secondary dark:text-slate-400">
+                          replaced by {rxNo(p.replaced_by_id)}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <Badge status={p.status} size="sm" />
+                      <div className="flex items-center gap-1.5">
+                        <Badge status={p.status} size="sm" />
+                        {user?.role === 'doctor' && p.status === 'active' && p.pharmacy_status === 'flagged' && (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200" title="A pharmacist flagged a problem — open to see why">
+                            Flagged
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    {showPharmacy && <td className="py-3.5 px-4">
                       {p.status === 'draft' ? (
                         <span className="text-text-light dark:text-slate-500">—</span>
                       ) : (
@@ -204,7 +239,7 @@ export default function PrescriptionsPage() {
                             dispensed: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' }[p.pharmacy_status ?? 'pending']
                         }`}>{p.pharmacy_status === 'verified' ? 'ready' : p.pharmacy_status ?? 'pending'}</span>
                       )}
-                    </td>
+                    </td>}
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-text dark:text-white">
                         {p.patient ? `${p.patient.first_name} ${p.patient.last_name}` : 'Authorized Patient'}
@@ -237,15 +272,6 @@ export default function PrescriptionsPage() {
                           </button>
                         )}
 
-                        {user?.role === 'doctor' && p.status !== 'cancelled' && p.status !== 'completed' && (
-                          <button
-                            onClick={(e) => handleCancel(p.id, e)}
-                            className="p-1 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            title="Cancel Prescription"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

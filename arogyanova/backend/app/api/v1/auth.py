@@ -24,6 +24,7 @@ from app.core.config import settings
 from app.domain.notifications import EmailNotificationChannel
 from app.db.database import get_db
 from app.models.models import (
+    NotificationModel,
     AuditLogModel, DoctorProfileModel, PasswordResetTokenModel, PatientProfileModel,
     PharmacistProfileModel, RefreshTokenModel, UserModel,
 )
@@ -31,6 +32,8 @@ from app.schemas.schemas import (
     ChangePasswordRequest, ForgotPasswordRequest, ForgotPasswordResponse, LoginRequest,
     MessageResponse, RegisterRequest, ResetPasswordRequest, UserDetailResponse,
 )
+from app.security.lockout import LOCKOUT
+from app.security.rate_limit import LOGIN_LIMIT, PASSWORD_RESET_LIMIT, REGISTER_LIMIT, limiter
 from app.security.dependencies import AnyAuthenticatedUser, get_current_user
 from app.security.passwords import (
     create_access_token, create_refresh_token, hash_password,
@@ -101,7 +104,8 @@ async def create_user_account(
     if body.role == "doctor":
         db.add(DoctorProfileModel(user_id=user.id, license_number=body.license_number, specialization=body.specialization))
     elif body.role == "patient":
-        db.add(PatientProfileModel(user_id=user.id, date_of_birth=body.date_of_birth, phone=body.phone))
+        db.add(PatientProfileModel(user_id=user.id, date_of_birth=body.date_of_birth, phone=body.phone,
+                                   blood_group=body.blood_group, allergies=body.allergies))
     elif body.role == "pharmacist":
         db.add(PharmacistProfileModel(user_id=user.id, license_number=body.license_number))
 
@@ -118,6 +122,7 @@ async def create_user_account(
     return user
 
 
+@limiter.limit(REGISTER_LIMIT)
 @router.post("/register", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     request: Request,
@@ -172,6 +177,7 @@ async def _load_user_with_profiles(db: AsyncSession, user_id: uuid.UUID) -> User
     return result.scalar_one()
 
 
+@limiter.limit(LOGIN_LIMIT)
 @router.post("/login", response_model=UserDetailResponse)
 async def login(
     request: Request,
@@ -190,6 +196,14 @@ async def login(
         )
     )
     user = result.scalar_one_or_none()
+    ip = request.client.host if request.client else None
+
+    # Locked accounts are refused before the password is even checked
+    if user and LOCKOUT.is_locked(user):
+        db.add(AuditLogModel(actor_id=user.id, action="auth.login.blocked", resource_type="user",
+                             resource_id=str(user.id), details="Login attempt while locked", ip_address=ip))
+        await db.commit()
+        raise HTTPException(status_code=423, detail=f"This account is locked after too many failed attempts. Try again in {LOCKOUT.minutes_left(user)} minute(s), reset your password, or ask an administrator to unlock it.")
 
     if not user or not verify_password(body.password, user.hashed_password):
         # Audit failed attempt
@@ -197,14 +211,29 @@ async def login(
             action="auth.login.failed",
             resource_type="user",
             details=f"Failed login for {body.email}",
-            ip_address=request.client.host if request.client else None,
+            ip_address=ip,
         ))
-        await db.commit()
+        if user:
+            just_locked = LOCKOUT.register_failure(user)
+            if just_locked:
+                db.add(AuditLogModel(actor_id=user.id, action="auth.lockout", resource_type="user", resource_id=str(user.id),
+                                     details=f"Locked for {LOCKOUT.lock_minutes} min after {LOCKOUT.max_attempts} failed logins", ip_address=ip))
+                db.add(NotificationModel(user_id=user.id, title="Account locked", priority="high", action_url="/settings",
+                                         message=f"Your account was locked for {LOCKOUT.lock_minutes} minutes after {LOCKOUT.max_attempts} wrong passwords. If this wasn't you, reset your password."))
+                await db.commit()
+                raise HTTPException(status_code=423, detail=f"Too many failed attempts — the account is locked for {LOCKOUT.lock_minutes} minutes.")
+            await db.commit()
+            left = LOCKOUT.attempts_left(user)
+            if left <= 2:
+                raise HTTPException(status_code=401, detail=f"Invalid email or password. {left} attempt(s) left before the account is locked.")
+        else:
+            await db.commit()
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Your account has been deactivated.")
 
+    LOCKOUT.reset(user)  # correct password: clear the failure counter
     access_token = create_access_token(user.id, user.role)
     raw_refresh, hashed_refresh = create_refresh_token()
     token_record = RefreshTokenModel(
@@ -321,8 +350,10 @@ def _hash_reset_token(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+@limiter.limit(PASSWORD_RESET_LIMIT)
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
 async def forgot_password(
+    request: Request,
     body: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ForgotPasswordResponse:
@@ -380,8 +411,10 @@ async def forgot_password(
     return ForgotPasswordResponse(message=_FORGOT_MESSAGE, dev_reset_token=dev_token)
 
 
+@limiter.limit(PASSWORD_RESET_LIMIT)
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
+    request: Request,
     body: ResetPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> MessageResponse:
@@ -409,6 +442,7 @@ async def reset_password(
         raise invalid
 
     user.hashed_password = hash_password(body.new_password)
+    LOCKOUT.reset(user)  # proving ownership by email also unlocks the account
     token.used = True
     # Log out every existing session
     await db.execute(

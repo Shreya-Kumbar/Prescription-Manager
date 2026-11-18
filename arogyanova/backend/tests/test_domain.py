@@ -20,7 +20,6 @@ from app.domain.notifications import (
 )
 from app.domain.ai_providers import (
     LocalInteractionChecker, UnavailableInteractionChecker,
-    LocalOCRProvider, UnavailableOCRProvider,
 )
 from app.security.passwords import (
     hash_password, verify_password, create_access_token, decode_access_token,
@@ -290,12 +289,6 @@ class TestNotificationPolymorphism:
 class TestAIProviderPolymorphism:
     """Tests that AI providers are interchangeable."""
 
-    @pytest.mark.asyncio
-    async def test_unavailable_ocr_returns_unavailable(self):
-        provider = UnavailableOCRProvider()
-        result = await provider.extract(b"fake_image", "image/jpeg")
-        assert not result.is_available
-        assert result.error_message is not None
 
     @pytest.mark.asyncio
     async def test_unavailable_interaction_checker(self):
@@ -327,9 +320,6 @@ class TestAIProviderPolymorphism:
         assert result.disclaimer
         assert "qualified healthcare professional" in result.disclaimer
 
-    def test_unavailable_provider_not_available(self):
-        provider = UnavailableOCRProvider()
-        assert not provider.is_available()
 
     def test_unavailable_checker_not_available(self):
         checker = UnavailableInteractionChecker()

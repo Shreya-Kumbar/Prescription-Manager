@@ -19,6 +19,7 @@ import AIReviewPage from './pages/AIReviewPage'
 import NotificationsPage from './pages/NotificationsPage'
 import UsersPage from './pages/UsersPage'
 import SettingsPage from './pages/SettingsPage'
+import AppointmentsPage from './pages/AppointmentsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -39,6 +40,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function ClinicianOnly({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   return user?.role === 'doctor' || user?.role === 'pharmacist' ? <>{children}</> : <Navigate to="/dashboard" replace />
+}
+
+function NoPharmacist({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  return user?.role !== 'pharmacist' ? <>{children}</> : <Navigate to="/dashboard" replace />
 }
 
 function PatientOnly({ children }: { children: React.ReactNode }) {
@@ -68,6 +74,7 @@ export default function App() {
         <Route path="schedule" element={<PatientOnly><MedicationSchedulePage /></PatientOnly>} />
         <Route path="ai-review" element={<ClinicianOnly><AIReviewPage /></ClinicianOnly>} />
         <Route path="analytics" element={<Navigate to="/dashboard" replace />} />
+        <Route path="appointments" element={<NoPharmacist><AppointmentsPage /></NoPharmacist>} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="settings" element={<SettingsPage />} />

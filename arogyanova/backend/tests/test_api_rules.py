@@ -52,8 +52,9 @@ async def env():
     doctor, _ = await client_for("doctor", "doc@example.com", license_number="L1")
     patient, patient_id = await client_for("patient", "pat@example.com")
     pharmacist, _ = await client_for("pharmacist", "ph@example.com", license_number="P1")
-    yield {"admin": admin, "doctor": doctor, "patient": patient, "pharmacist": pharmacist, "patient_id": patient_id, "med": med}
-    for c in (admin, doctor, patient, pharmacist):
+    doctor2, _ = await client_for("doctor", "doc2@example.com", license_number="L2")
+    yield {"admin": admin, "doctor": doctor, "doctor2": doctor2, "patient": patient, "pharmacist": pharmacist, "patient_id": patient_id, "med": med}
+    for c in (admin, doctor, doctor2, patient, pharmacist):
         await c.aclose()
     app.dependency_overrides.clear()
     await engine.dispose()
@@ -128,3 +129,38 @@ async def test_doses_can_only_be_logged_once_and_not_in_the_future(env):
     assert (await pat.post(f"/api/v1/schedule/{today[0]['id']}/log", json={"action": "taken"})).status_code == 200
     again = await pat.post(f"/api/v1/schedule/{today[0]['id']}/log", json={"action": "skipped"})
     assert again.status_code == 400 and "already been logged" in again.json()["detail"]
+
+
+async def test_doctors_see_patient_history_from_other_doctors_read_only(env):
+    doc, doc2, pid = env["doctor"], env["doctor2"], env["patient_id"]
+    issued = (await doc.post("/api/v1/prescriptions", json=_rx(env))).json()
+    await doc.post(f"/api/v1/prescriptions/{issued['id']}/finalize")
+    draft = (await doc.post("/api/v1/prescriptions", json=_rx(env))).json()   # stays a draft
+
+    # another doctor can read the issued one, never the draft
+    assert (await doc2.get(f"/api/v1/prescriptions/{issued['id']}")).status_code == 200
+    assert (await doc2.get(f"/api/v1/prescriptions/{draft['id']}")).status_code == 403
+
+    # patient history and "all doctors" include it; default list is only their own
+    hist = {p["id"] for p in (await doc2.get("/api/v1/prescriptions", params={"patient_id": pid})).json()["items"]}
+    assert issued["id"] in hist and draft["id"] not in hist
+    everyone = {p["id"] for p in (await doc2.get("/api/v1/prescriptions", params={"scope": "all"})).json()["items"]}
+    assert issued["id"] in everyone and draft["id"] not in everyone
+    assert (await doc2.get("/api/v1/prescriptions")).json()["total"] == 0
+
+    # but it stays read-only for them
+    assert (await doc2.post(f"/api/v1/prescriptions/{issued['id']}/cancel", json={"reason": "not mine"})).status_code == 403
+    assert (await doc2.patch(f"/api/v1/prescriptions/{draft['id']}", json={"diagnosis": "x"})).status_code == 403
+
+
+async def test_patient_registration_saves_blood_group_and_allergies(env):
+    admin = env["admin"]
+    body = {"email": "walkin@example.com", "password": "Testpass123", "first_name": "Walk", "last_name": "In",
+            "role": "patient", "blood_group": "B+", "allergies": "Penicillin"}
+    bad = await admin.post("/api/v1/admin/users", json={**body, "email": "x@example.com", "blood_group": "Z+"})
+    assert bad.status_code == 422
+    r = await admin.post("/api/v1/admin/users", json=body)
+    assert r.status_code == 201
+    prof = r.json()["patient_profile"]
+    assert prof["blood_group"] == "B+" and prof["allergies"] == "Penicillin"
+    assert r.json()["created_at"]   # registration date

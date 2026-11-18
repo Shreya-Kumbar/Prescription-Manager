@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import RegisterPatientModal from '../components/vitals/RegisterPatientModal';
 import { Users, Search, Eye, Phone, Mail, Calendar, Droplet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -8,6 +11,10 @@ import EmptyState from '../components/ui/EmptyState';
 
 export default function PatientsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const canRegister = user?.role === 'receptionist' || user?.role === 'administrator';
+  const [showRegister, setShowRegister] = useState(params.get('register') === '1');
   const [patients, setPatients] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -40,10 +47,22 @@ export default function PatientsPage() {
         <div>
           <h2 className="text-xl font-bold text-text dark:text-white">Patient Directory</h2>
           <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-            Authorized patient profiles and clinical history
+            {user?.role === 'receptionist' ? 'Find a patient to record vitals, or register a walk-in' : 'Authorized patient profiles and clinical history'}
           </p>
         </div>
+        {canRegister && (
+          <button onClick={() => setShowRegister(true)} className="btn-primary text-sm self-start sm:self-auto">
+            <UserPlus className="w-4 h-4" /> Register patient
+          </button>
+        )}
       </div>
+      {canRegister && (
+        <RegisterPatientModal
+          isOpen={showRegister}
+          onClose={() => { setShowRegister(false); if (params.get('register')) setParams({}); }}
+          onCreated={(id) => navigate(`/patients/${id}`)}
+        />
+      )}
 
       {/* Search Bar */}
       <div className="card p-4">
@@ -111,6 +130,10 @@ export default function PatientsPage() {
                       Blood Group: {patient.patient_profile.blood_group}
                     </p>
                   )}
+                  <p className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
+                    Registered: {new Date(patient.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
                 </div>
               </div>
 

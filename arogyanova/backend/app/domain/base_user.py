@@ -20,6 +20,7 @@ class UserRole(str, Enum):
     PATIENT = "patient"
     PHARMACIST = "pharmacist"
     ADMINISTRATOR = "administrator"
+    RECEPTIONIST = "receptionist"
 
 
 class BaseUser(ABC):

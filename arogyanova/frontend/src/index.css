@@ -169,13 +169,13 @@ html.dark .card:hover { border-color: #2E4538; box-shadow: 0 6px 18px -10px rgba
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
-.page-enter > * { animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.page-enter > * > * { animation: fadeUp 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.page-enter > * > *:nth-child(2) { animation-delay: 0.05s; }
-.page-enter > * > *:nth-child(3) { animation-delay: 0.1s; }
-.page-enter > * > *:nth-child(4) { animation-delay: 0.15s; }
-.page-enter > * > *:nth-child(n+5) { animation-delay: 0.2s; }
-.page-enter .grid > * { animation: fadeUp 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter > * { animation: fadeUp 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter > * > * { animation: fadeUp 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.page-enter > * > *:nth-child(2) { animation-delay: 0.03s; }
+.page-enter > * > *:nth-child(3) { animation-delay: 0.06s; }
+.page-enter > * > *:nth-child(4) { animation-delay: 0.09s; }
+.page-enter > * > *:nth-child(n+5) { animation-delay: 0.12s; }
+.page-enter .grid > * { animation: fadeUp 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .page-enter .grid > *:nth-child(2) { animation-delay: 0.05s; }
 .page-enter .grid > *:nth-child(3) { animation-delay: 0.1s; }
 .page-enter .grid > *:nth-child(n+4) { animation-delay: 0.15s; }
@@ -422,3 +422,74 @@ html.dark .bell-btn:hover { background-color: rgba(124, 196, 160, 0.12) !importa
 /* Login card: content swaps between sign-in and sign-up with a soft slide */
 @keyframes cardSwap { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 .card-swap { animation: cardSwap 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* ---- Login card: tabs, directional slide, card pop, short-screen layout ---- */
+.auth-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; margin-bottom: 22px;
+  border-radius: 14px; background: rgba(19, 38, 29, 0.07); }
+.auth-tabs button { position: relative; z-index: 1; height: 38px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  color: #4E6358; transition: color 0.25s ease; }
+.auth-tabs button.is-active { color: #13261D; }
+.auth-tabs button:hover:not(.is-active) { color: #2F7D57; }
+.auth-tabs-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 10px;
+  background: #fff; box-shadow: 0 4px 12px -6px rgba(19, 38, 29, 0.35);
+  transition: transform 0.35s cubic-bezier(0.3, 1.3, 0.5, 1); }
+.auth-tabs-pill.is-right { transform: translateX(100%); }
+
+@keyframes swapFromRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes swapFromLeft  { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.card-swap-right { animation: swapFromRight 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.card-swap-left  { animation: swapFromLeft 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.card-swap-right > *, .card-swap-left > * { animation: fadeUp 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.card-swap-right > *:nth-child(2), .card-swap-left > *:nth-child(2) { animation-delay: 0.05s; }
+.card-swap-right > *:nth-child(3), .card-swap-left > *:nth-child(3) { animation-delay: 0.1s; }
+.card-swap-right > *:nth-child(n+4), .card-swap-left > *:nth-child(n+4) { animation-delay: 0.15s; }
+
+.login-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.login-card:hover { transform: translateY(-3px); box-shadow: 0 36px 70px -28px rgba(0, 0, 0, 0.6); }
+.login-input:hover:not(:focus) { border-color: rgba(47, 125, 87, 0.35); }
+
+/* Short windows (high browser zoom / small laptops): tighter spacing so the card fits */
+@media (max-height: 760px) and (min-width: 1024px) {
+  .login-shell { padding-top: 24px; padding-bottom: 12px; }
+  .login-card { padding: 22px 26px !important; }
+  .login-card h2 { font-size: 1.6rem; }
+  .login-card form { margin-top: 14px !important; }
+  .login-card form > * + * { margin-top: 10px !important; }
+  .login-input { height: 40px; }
+  .login-btn { height: 42px; }
+  .auth-tabs { margin-bottom: 14px; }
+  .auth-tabs button { height: 34px; }
+  .login-shell h1 { font-size: 2.6rem !important; }
+}
+
+/* Schedule tabs (Today / Upcoming / History) */
+.sched-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(19, 38, 29, 0.06); }
+html.dark .sched-tabs { background: rgba(255, 255, 255, 0.05); }
+.sched-tabs button { padding: 6px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #64748B; transition: background-color 0.2s, color 0.2s; }
+.sched-tabs button:hover:not(.is-active) { color: #2F7D57; }
+.sched-tabs button.is-active { background: #fff; color: #13261D; box-shadow: 0 3px 10px -6px rgba(19, 38, 29, 0.4); }
+html.dark .sched-tabs button.is-active { background: #1C2922; color: #fff; }
+
+/* Native date/time pickers: render controls (incl. the calendar icon) in light colours on the dark theme */
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+.dark input::-webkit-calendar-picker-indicator {
+  opacity: 0.8;
+  cursor: pointer;
+}
+.dark input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Appointment slot picker */
+.slot-btn { padding: 7px 4px; border-radius: 9px; font-size: 12px; font-weight: 600; border: 1px solid #DCE7E0;
+  background: #fff; color: #13261D; transition: background-color .15s, border-color .15s, color .15s; }
+.slot-btn:hover:not(:disabled) { border-color: #3E8C64; color: #2F7D57; }
+.slot-btn.is-picked { background: #3E8C64; border-color: #3E8C64; color: #fff; }
+.slot-btn:disabled { opacity: .45; text-decoration: line-through; cursor: not-allowed; background: transparent; }
+html.dark .slot-btn { background: #121B17; border-color: #24352C; color: #E2E8F0; }
+html.dark .slot-btn.is-picked { background: #3E8C64; border-color: #3E8C64; color: #fff; }
+html.dark .slot-btn:disabled { background: transparent; }

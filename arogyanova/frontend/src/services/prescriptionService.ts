@@ -7,6 +7,7 @@ import type {
 } from '../types';
 
 export interface CreatePrescriptionData {
+  replaces_id?: string;
   patient_id: string;
   issue_date: string;
   follow_up_date?: string;
@@ -34,6 +35,8 @@ export interface PrescriptionFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  patient_id?: string;
+  scope?: 'mine' | 'all';
 }
 
 export const prescriptionService = {
@@ -65,8 +68,8 @@ export const prescriptionService = {
     return data;
   },
 
-  async cancel(id: string): Promise<PrescriptionDetail> {
-    const { data } = await api.post<PrescriptionDetail>(`/prescriptions/${id}/cancel`);
+  async cancel(id: string, reason: string): Promise<PrescriptionDetail> {
+    const { data } = await api.post<PrescriptionDetail>(`/prescriptions/${id}/cancel`, { reason });
     return data;
   },
 };

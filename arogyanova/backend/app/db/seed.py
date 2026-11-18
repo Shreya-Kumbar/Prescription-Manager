@@ -41,6 +41,20 @@ MEDICATIONS = [
 ]
 
 
+async def ensure_demo_receptionist() -> None:
+    """Idempotently add the demo receptionist (databases seeded before the role existed)."""
+    async with AsyncSessionLocal() as db:
+        exists = (await db.execute(select(UserModel).where(UserModel.email == "reception.meera@arogyanova.dev"))).scalar_one_or_none()
+        if exists:
+            return
+        db.add(UserModel(
+            id=uuid.uuid4(), email="reception.meera@arogyanova.dev",
+            hashed_password=hash_password("Demo@Reception123"),
+            first_name="Meera", last_name="Iyer", role="receptionist", is_active=True,
+        ))
+        await db.commit()
+
+
 async def seed() -> None:
     """Idempotent seed — skips if users already exist in the database."""
 
@@ -300,6 +314,7 @@ async def seed() -> None:
         print("  patient.ravi@arogyanova.dev  | Demo@Patient123  | Patient")
         print("  patient.priya@arogyanova.dev | Demo@Patient123  | Patient")
         print("  pharma.anil@arogyanova.dev   | Demo@Pharma123   | Pharmacist")
+        print("  reception.meera@arogyanova.dev | Demo@Reception123 | Receptionist")
 
 
 if __name__ == "__main__":

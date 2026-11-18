@@ -1,6 +1,6 @@
 import MyHealthProfile from '../components/settings/MyHealthProfile';
 import React, { useState } from 'react';
-import { Settings, Lock, User, Shield, Bell, Key, Check } from 'lucide-react';
+import { Settings, Lock, User, Shield, Key, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -16,8 +16,6 @@ export default function SettingsPage() {
   const [isChangingPass, setIsChangingPass] = useState(false);
 
   // Preference state
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [adherenceReminders, setAdherenceReminders] = useState(true);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,45 +145,6 @@ export default function SettingsPage() {
             {isChangingPass ? 'Updating...' : 'Update Password'}
           </button>
         </form>
-      </div>
-
-      {/* Notification Preferences */}
-      <div className="card p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-text dark:text-white flex items-center gap-2">
-          <Bell className="w-4 h-4 text-primary" /> Notification Preferences
-        </h3>
-
-        <div className="space-y-3 text-xs">
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17] cursor-pointer">
-            <div>
-              <span className="font-semibold text-text dark:text-white block">Clinical Status Updates</span>
-              <span className="text-text-secondary dark:text-slate-400 text-[11px]">
-                Notify when a prescription is finalized, cancelled, or renewed.
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={emailAlerts}
-              onChange={(e) => setEmailAlerts(e.target.checked)}
-              className="w-4 h-4 text-primary rounded"
-            />
-          </label>
-
-          <label className="flex items-center justify-between p-3 rounded-lg border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17] cursor-pointer">
-            <div>
-              <span className="font-semibold text-text dark:text-white block">Medication Dosing Reminders</span>
-              <span className="text-text-secondary dark:text-slate-400 text-[11px]">
-                Daily prompt for scheduled doses to encourage compliance.
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={adherenceReminders}
-              onChange={(e) => setAdherenceReminders(e.target.checked)}
-              className="w-4 h-4 text-primary rounded"
-            />
-          </label>
-        </div>
       </div>
     </div>
   );

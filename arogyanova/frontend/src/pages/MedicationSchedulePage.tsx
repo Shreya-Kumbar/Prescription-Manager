@@ -1,211 +1,154 @@
-import React, { useEffect, useState } from 'react';
-import {
-  CalendarCheck,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Pill,
-  Calendar as CalendarIcon,
-  Check,
-  X,
-  AlertCircle,
-  TrendingUp,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CalendarCheck, Check, CheckCircle2, Clock, Pill, TrendingUp, X, XCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import type { ScheduleEntry } from '../types';
 import StatCard from '../components/ui/StatCard';
 import EmptyState from '../components/ui/EmptyState';
 
+type DoseState = 'taken' | 'skipped' | 'missed' | 'due' | 'upcoming';
+type Tab = 'today' | 'upcoming' | 'history';
+
+/** A dose can be logged only on its own day; past unlogged doses are missed. */
+function stateOf(entry: ScheduleEntry, now = new Date()): DoseState {
+  if (entry.logged_action === 'taken' || entry.logged_action === 'skipped') return entry.logged_action;
+  const day = new Date(entry.scheduled_at).toDateString();
+  if (day === now.toDateString()) return 'due';
+  return new Date(entry.scheduled_at) < now ? 'missed' : 'upcoming';
+}
+
+const BADGE: Record<Exclude<DoseState, 'due'>, { label: string; cls: string; icon: React.ElementType }> = {
+  taken: { label: 'Taken', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/40', icon: Check },
+  skipped: { label: 'Skipped', cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/40', icon: X },
+  missed: { label: 'Missed', cls: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/40', icon: XCircle },
+  upcoming: { label: 'Upcoming', cls: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-white/[0.04] dark:text-slate-400 dark:border-[#24352C]', icon: Clock },
+};
+
 export default function MedicationSchedulePage() {
-  const { user } = useAuth();
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [adherenceStats, setAdherenceStats] = useState<any>(null);
+  const [tab, setTab] = useState<Tab>('today');
 
   const fetchSchedule = async () => {
     try {
       setIsLoading(true);
       const res = await api.get('/schedule');
       setSchedule(res.data || []);
-
-      // Calculate statistics
-      const total = res.data.length;
-      const taken = res.data.filter((s: ScheduleEntry) => s.logged_action === 'taken').length;
-      const skipped = res.data.filter((s: ScheduleEntry) => s.logged_action === 'skipped').length;
-      const logged = taken + skipped;
-      const rate = logged > 0 ? Math.round((taken / logged) * 100) : 100;
-
-      setAdherenceStats({
-        total,
-        taken,
-        skipped,
-        rate,
-        pending: total - logged,
-      });
     } catch {
       toast.error('Failed to load medication schedule.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchSchedule();
-  }, []);
+  useEffect(() => { fetchSchedule(); }, []);
 
   const handleLogAction = async (id: string, action: 'taken' | 'skipped') => {
     try {
       await api.post(`/schedule/${id}/log`, { action });
-      toast.success(`Dose marked as ${action}!`);
+      toast.success(`Dose marked as ${action}`);
       fetchSchedule();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to log dose activity.');
+      toast.error(err.response?.data?.detail || 'Failed to log dose.');
     }
   };
 
+  const withState = useMemo(() => {
+    const now = new Date();
+    return schedule
+      .map((e) => ({ ...e, state: stateOf(e, now) }))
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  }, [schedule]);
+
+  const today = withState.filter((e) => new Date(e.scheduled_at).toDateString() === new Date().toDateString());
+  const upcoming = withState.filter((e) => e.state === 'upcoming');
+  const history = withState.filter((e) => new Date(e.scheduled_at) < new Date(new Date().toDateString())).reverse();
+
+  const counted = withState.filter((e) => ['taken', 'skipped', 'missed'].includes(e.state));
+  const taken = counted.filter((e) => e.state === 'taken').length;
+  const missed = counted.filter((e) => e.state === 'missed').length;
+  const rate = counted.length ? Math.round((taken / counted.length) * 100) : null;
+  const dueNow = today.filter((e) => e.state === 'due').length;
+
+  const lists: Record<Tab, typeof withState> = { today, upcoming, history };
+  const shown = lists[tab];
+
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header */}
+    <div className="space-y-6 pb-12">
       <div>
-        <h2 className="text-xl font-bold text-text dark:text-white">Medication Schedule &amp; Adherence</h2>
+        <h2 className="text-xl font-bold text-text dark:text-white">Medication schedule</h2>
         <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-          Patient medication schedule generated from active prescriptions
+          Log each dose on its day. Doses not logged by the end of their day count as missed.
         </p>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Adherence Score"
-          value={`${adherenceStats?.rate ?? 100}%`}
-          subtitle="User-reported adherence rate"
-          icon={TrendingUp}
-          color="success"
-        />
-        <StatCard
-          title="Scheduled Doses"
-          value={adherenceStats?.total ?? 0}
-          subtitle="Total schedule entries"
-          icon={CalendarCheck}
-          color="primary"
-        />
-        <StatCard
-          title="Doses Taken"
-          value={adherenceStats?.taken ?? 0}
-          subtitle="Reported as taken"
-          icon={CheckCircle2}
-          color="secondary"
-        />
-        <StatCard
-          title="Doses Skipped"
-          value={adherenceStats?.skipped ?? 0}
-          subtitle="Reported as skipped"
-          icon={XCircle}
-          color="warning"
-        />
+        <StatCard title="Adherence" value={rate != null ? `${rate}%` : '—'} subtitle="Taken out of all past doses" icon={TrendingUp} color="success" />
+        <StatCard title="Due today" value={dueNow} subtitle={`${today.length} scheduled today`} icon={CalendarCheck} color="primary" />
+        <StatCard title="Taken" value={taken} subtitle="Doses logged as taken" icon={CheckCircle2} color="secondary" />
+        <StatCard title="Missed" value={missed} subtitle="Past doses never logged" icon={XCircle} color="warning" />
       </div>
 
-      {/* Advisory Banner */}
-      <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-xs flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200">
-        <AlertCircle className="w-4 h-4 text-primary dark:text-emerald-400 shrink-0" />
-        <span>
-          <strong>Clinical Note:</strong> ArogyaNova tracks user-reported medication compliance.
-          Doses marked as taken provide decision-support analytics for your healthcare team.
-        </span>
-      </div>
-
-      {/* Schedule Entries */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-text dark:text-white mb-4">Daily Dosing Schedule</h3>
-
-        {isLoading ? (
-          <div className="space-y-3 animate-pulse">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="sched-tabs" role="tablist">
+            {([['today', `Today (${today.length})`], ['upcoming', `Upcoming (${upcoming.length})`], ['history', `History (${history.length})`]] as [Tab, string][]).map(([k, label]) => (
+              <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={tab === k ? 'is-active' : ''}>
+                {label}
+              </button>
             ))}
           </div>
-        ) : schedule.length > 0 ? (
-          <div className="space-y-3">
-            {schedule.map((entry) => {
-              const dt = new Date(entry.scheduled_at);
-              const formattedDate = dt.toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              });
-              const formattedTime = dt.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              });
-              const endOfToday = new Date();
-              endOfToday.setHours(23, 59, 59, 999);
-              const isFuture = dt > endOfToday; // doses for later days can't be logged yet
+          {tab === 'today' && dueNow > 0 && (
+            <span className="text-xs text-text-secondary dark:text-slate-400 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" /> {dueNow} dose{dueNow === 1 ? '' : 's'} still to log today
+            </span>
+          )}
+        </div>
 
+        {isLoading ? (
+          <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
+        ) : shown.length === 0 ? (
+          <EmptyState
+            icon={CalendarCheck}
+            title={tab === 'today' ? 'Nothing scheduled today' : tab === 'upcoming' ? 'No upcoming doses' : 'No past doses yet'}
+            description={tab === 'today' ? 'Doses appear here when your doctor finalizes a prescription.' : ''}
+          />
+        ) : (
+          <div key={tab} className="space-y-3 card-swap-right">
+            {shown.map((entry) => {
+              const dt = new Date(entry.scheduled_at);
+              const badge = entry.state !== 'due' ? BADGE[entry.state] : null;
               return (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-xl border border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1C2922] transition-colors"
+                  className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                    entry.state === 'due'
+                      ? 'border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/60 dark:bg-emerald-950/20'
+                      : 'border-border dark:border-[#24352C] bg-slate-50/50 dark:bg-[#121B17]/70'
+                  }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400 mt-0.5">
+                    <div className="icon-tile p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400 mt-0.5">
                       <Pill className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm text-text dark:text-white">
-                        {entry.medication_name} — {entry.dosage}
-                      </h4>
-                      <div className="flex items-center gap-3 text-xs text-text-secondary dark:text-slate-400 mt-1">
-                        <span className="flex items-center gap-1 font-medium text-text dark:text-slate-200">
-                          <CalendarIcon className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
-                          {formattedDate}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-text-light dark:text-slate-500" />
-                          {formattedTime}
-                        </span>
-                      </div>
-                      {entry.instructions && (
-                        <p className="text-[11px] text-text-light dark:text-slate-400 mt-1 italic">
-                          Instructions: {entry.instructions}
-                        </p>
-                      )}
+                      <h4 className="font-semibold text-sm text-text dark:text-white">{entry.medication_name} — {entry.dosage}</h4>
+                      <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">
+                        {dt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · {dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      {entry.instructions && <p className="text-[11px] text-text-light dark:text-slate-400 mt-1 italic">{entry.instructions}</p>}
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {entry.logged_action ? (
-                      <span
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium inline-flex items-center gap-1.5 ${
-                          entry.logged_action === 'taken'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/40'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/40'
-                        }`}
-                      >
-                        {entry.logged_action === 'taken' ? (
-                          <Check className="w-3.5 h-3.5" />
-                        ) : (
-                          <X className="w-3.5 h-3.5" />
-                        )}
-                        Marked as {entry.logged_action}
-                      </span>
-                    ) : isFuture ? (
-                      <span className="text-xs px-3 py-1.5 rounded-full font-medium inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 dark:bg-white/[0.04] dark:text-slate-400 dark:border-[#24352C]">
-                        <Clock className="w-3.5 h-3.5" /> Upcoming
+                    {badge ? (
+                      <span className={`text-xs px-3 py-1.5 rounded-full border font-medium inline-flex items-center gap-1.5 ${badge.cls}`}>
+                        <badge.icon className="w-3.5 h-3.5" /> {badge.label}
                       </span>
                     ) : (
                       <>
-                        <button
-                          onClick={() => handleLogAction(entry.id, 'taken')}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
-                        >
-                          <Check className="w-3.5 h-3.5" /> Take Dose
+                        <button onClick={() => handleLogAction(entry.id, 'taken')} className="btn-primary text-xs !py-1.5">
+                          <Check className="w-3.5 h-3.5" /> Taken
                         </button>
-                        <button
-                          onClick={() => handleLogAction(entry.id, 'skipped')}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
-                        >
+                        <button onClick={() => handleLogAction(entry.id, 'skipped')} className="btn-secondary text-xs !py-1.5">
                           <X className="w-3.5 h-3.5" /> Skip
                         </button>
                       </>
@@ -215,12 +158,6 @@ export default function MedicationSchedulePage() {
               );
             })}
           </div>
-        ) : (
-          <EmptyState
-            icon={CalendarCheck}
-            title="No Scheduled Doses"
-            description="There are currently no active medication schedules. Finalize an active prescription to automatically populate doses."
-          />
         )}
       </div>
     </div>

@@ -1,29 +1,19 @@
 import React, { useState } from 'react';
 import {
   Sparkles,
-  Upload,
   AlertTriangle,
   CheckCircle2,
-  FileText,
   ShieldAlert,
   Search,
   Plus,
   Trash2,
   HelpCircle,
-  FileSearch,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-import type { InteractionCheckResult, OCRResult } from '../types';
+import type { InteractionCheckResult } from '../types';
 
 export default function AIReviewPage() {
-  const [activeTab, setActiveTab] = useState<'ocr' | 'interactions'>('interactions');
-
-  // OCR State
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
-
   // Interaction State
   const [medicinesToCheck, setMedicinesToCheck] = useState<string[]>([
     'Aspirin',
@@ -32,36 +22,6 @@ export default function AIReviewPage() {
   const [newMedName, setNewMedName] = useState('');
   const [interactionLoading, setInteractionLoading] = useState(false);
   const [interactionResult, setInteractionResult] = useState<InteractionCheckResult | null>(null);
-
-  // Handlers for OCR
-  const handleOcrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setOcrFile(e.target.files[0]);
-    }
-  };
-
-  const handleRunOcr = async () => {
-    if (!ocrFile) {
-      toast.error('Please select an image file first.');
-      return;
-    }
-
-    try {
-      setOcrLoading(true);
-      const formData = new FormData();
-      formData.append('file', ocrFile);
-
-      const res = await api.post('/ai/ocr', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setOcrResult(res.data);
-      toast.success('Prescription image processed successfully.');
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'OCR extraction failed.');
-    } finally {
-      setOcrLoading(false);
-    }
-  };
 
   // Handlers for Interactions
   const addMedicine = () => {
@@ -110,39 +70,15 @@ export default function AIReviewPage() {
           <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-primary dark:text-emerald-400">
             <Sparkles className="w-5 h-5" />
           </span>
-          <h2 className="text-xl font-bold text-text dark:text-white">AI Clinical Review &amp; Safety</h2>
+          <h2 className="text-xl font-bold text-text dark:text-white">AI drug-interaction check</h2>
         </div>
         <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">
-          Decision-support tools for prescription digitization and pharmaceutical interaction screening
+          Check a list of medicines for dangerous combinations before prescribing or dispensing
         </p>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-border dark:border-[#24352C] text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('interactions')}
-          className={`py-3 px-5 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'interactions'
-              ? 'border-primary text-primary dark:text-emerald-400 font-bold'
-              : 'border-transparent text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" /> Drug-Drug Interaction Checker
-        </button>
-        <button
-          onClick={() => setActiveTab('ocr')}
-          className={`py-3 px-5 border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'ocr'
-              ? 'border-primary text-primary dark:text-emerald-400 font-bold'
-              : 'border-transparent text-text-secondary dark:text-slate-400 hover:text-text dark:hover:text-white'
-          }`}
-        >
-          <FileSearch className="w-4 h-4" /> Prescription OCR Extraction
-        </button>
-      </div>
-
       {/* TAB 1: INTERACTION CHECKER */}
-      {activeTab === 'interactions' && (
+      {(
         <div className="space-y-6">
           <div className="card p-6 space-y-4">
             <div>
@@ -266,108 +202,6 @@ export default function AIReviewPage() {
         </div>
       )}
 
-      {/* TAB 2: OCR EXTRACTION */}
-      {activeTab === 'ocr' && (
-        <div className="space-y-6">
-          <div className="card p-6 space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-text dark:text-white">Prescription Document OCR</h3>
-              <p className="text-xs text-text-secondary dark:text-slate-400 mt-0.5">
-                Upload scanned prescription slip (JPEG, PNG, WebP) to extract structured clinical fields
-              </p>
-            </div>
-
-            <div className="border-2 border-dashed border-border dark:border-[#24352C] rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <Upload className="w-8 h-8 text-text-light dark:text-slate-500 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-text dark:text-white">
-                {ocrFile ? ocrFile.name : 'Select or drop a prescription image'}
-              </p>
-              <p className="text-[11px] text-text-secondary dark:text-slate-400 mt-1 mb-4">
-                Supported formats: PNG, JPG, WebP (Max 10 MB)
-              </p>
-              <label className="btn-secondary text-xs cursor-pointer inline-flex">
-                <span>Browse Local Files</span>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={handleOcrFileChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={handleRunOcr}
-                disabled={!ocrFile || ocrLoading}
-                className="btn-primary text-xs shadow-xs"
-              >
-                {ocrLoading ? 'Extracting Text...' : 'Run OCR Extraction'}
-              </button>
-            </div>
-          </div>
-
-          {/* OCR Result Review */}
-          {ocrResult && (
-            <div className="card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-border dark:border-[#24352C] pb-3">
-                <h4 className="text-sm font-bold text-text dark:text-white">Extracted Prescription Fields</h4>
-                <span className="text-xs text-text-secondary dark:text-slate-400">
-                  Provider: {ocrResult.provider}
-                </span>
-              </div>
-
-              {ocrResult.medicines?.length > 0 ? (
-                <div className="overflow-x-auto border border-border dark:border-[#24352C] rounded-lg">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-[#121B17] text-text-secondary dark:text-slate-400 border-b border-border dark:border-[#24352C] uppercase text-[10px]">
-                      <tr>
-                        <th className="py-2.5 px-3">Candidate Medication</th>
-                        <th className="py-2.5 px-3">Extracted Strength</th>
-                        <th className="py-2.5 px-3">Confidence Status</th>
-                        <th className="py-2.5 px-3">Review Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border dark:divide-[#24352C]">
-                      {ocrResult.medicines.map((med, i) => (
-                        <tr key={i} className="hover:bg-slate-50/40 dark:hover:bg-[#1C2922] transition-colors">
-                          <td className="py-3 px-3 font-semibold text-text dark:text-white">{med.name}</td>
-                          <td className="py-3 px-3 font-mono text-text dark:text-white">
-                            {med.strength || 'Not detected'}
-                          </td>
-                          <td className="py-3 px-3">
-                            {med.is_uncertain ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                                Requires Doctor Verification
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
-                                High Confidence
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-text-secondary dark:text-slate-400">
-                            Confirmed in Clinical Form
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-xs text-text-secondary dark:text-slate-400">
-                  Raw text extracted: {ocrResult.raw_text || 'No structured medications identified.'}
-                </p>
-              )}
-
-              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-900 dark:text-amber-200">
-                <strong>Medical Safeguard:</strong> All AI-extracted candidate fields must be manually
-                reviewed and authorized by a licensed prescriber before issuing a final prescription.
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

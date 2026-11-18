@@ -55,7 +55,7 @@ All file paths are inside `arogyanova/backend/app/` unless they start with `fron
 |---|---|---|---|
 | Toggle dark mode | "Theme is shared app-wide through a React Context." | **GUI**, Provider pattern | `frontend/src/context/ThemeContext.tsx` |
 | Open `localhost:8000/docs` | "Auto-generated API documentation for our REST endpoints." | **Computer Networks**: REST/HTTP | `main.py` |
-| (mention) | "62 automated tests check these rules." | **Testing** | `backend/tests/` |
+| (mention) | "85 automated tests check these rules." | **Testing** | `backend/tests/` |
 
 ---
 

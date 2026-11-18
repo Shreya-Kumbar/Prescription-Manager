@@ -18,7 +18,9 @@ import { useAuth } from '../context/AuthContext';
 import { prescriptionService } from '../services/prescriptionService';
 import type { PrescriptionDetail } from '../types';
 import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
 import PharmacyPanel from '../components/prescriptions/PharmacyPanel';
+import { rxNo } from '../utils/rxNumber';
 import EditDraftModal from '../components/prescriptions/EditDraftModal';
 
 export default function PrescriptionDetailsPage() {
@@ -58,12 +60,15 @@ export default function PrescriptionDetailsPage() {
     }
   };
 
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const handleCancel = async () => {
-    if (!id) return;
-    if (!window.confirm('Are you sure you want to cancel this prescription?')) return;
+    if (!id || cancelReason.trim().length < 3) return;
     try {
-      await prescriptionService.cancel(id);
-      toast.success('Prescription cancelled.');
+      await prescriptionService.cancel(id, cancelReason.trim());
+      toast.success('Prescription cancelled — the patient has been told to stop the remaining doses.');
+      setCancelOpen(false);
+      setCancelReason('');
       fetchPrescription();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Failed to cancel.');
@@ -99,8 +104,35 @@ export default function PrescriptionDetailsPage() {
     );
   }
 
+  // Only the prescribing doctor can change it; other doctors see it read-only as medical history
+  const isAuthor = user?.role === 'doctor' && prescription.doctor?.id === user?.id;
+  const otherDoctorView = user?.role === 'doctor' && !isAuthor;
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-fade-in pb-12">
+      {otherDoctorView && (
+        <div className="no-print rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-400/20 dark:bg-sky-400/10 px-4 py-3 text-xs text-sky-800 dark:text-sky-200">
+          Read-only — written by {prescription.doctor ? `Dr. ${prescription.doctor.first_name} ${prescription.doctor.last_name}` : 'another doctor'}. Shown as part of the patient's medication history; only the prescribing doctor can change or cancel it.
+        </div>
+      )}
+      {prescription.status === 'cancelled' && (
+        <div className="no-print rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-400/20 dark:bg-rose-400/10 px-4 py-3 text-xs text-rose-800 dark:text-rose-200 flex flex-wrap items-center justify-between gap-2">
+          <span><b>Cancelled</b>{prescription.cancellation_reason ? ` — ${prescription.cancellation_reason}` : ''}</span>
+          {prescription.replaced_by_id && (
+            <button onClick={() => navigate(`/prescriptions/${prescription.replaced_by_id}`)} className="font-semibold underline">
+              Open the corrected prescription {rxNo(prescription.replaced_by_id)} →
+            </button>
+          )}
+        </div>
+      )}
+      {prescription.replaces_id && (
+        <div className="no-print rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-400/20 dark:bg-amber-400/10 px-4 py-3 text-xs text-amber-900 dark:text-amber-100 flex flex-wrap items-center justify-between gap-2">
+          <span>Corrected version of {rxNo(prescription.replaces_id)}{prescription.status === 'draft' ? ' — the original stays active until you issue this one.' : ', which was flagged by the pharmacy.'}</span>
+          <button onClick={() => navigate(`/prescriptions/${prescription.replaces_id}`)} className="font-semibold underline">
+            View original {rxNo(prescription.replaces_id)} →
+          </button>
+        </div>
+      )}
       {/* Top Action Bar (hidden on print) */}
       <div className="no-print flex items-center justify-between">
         <button
@@ -119,13 +151,13 @@ export default function PrescriptionDetailsPage() {
             <Printer className="w-3.5 h-3.5" /> Print Prescription
           </button>
 
-          {user?.role === 'doctor' && prescription.status === 'draft' && (
+          {isAuthor && prescription.status === 'draft' && (
             <button onClick={() => setEditingDraft(true)} className="btn-secondary text-xs">
               Edit draft
             </button>
           )}
 
-          {user?.role === 'doctor' && prescription.status === 'draft' && (
+          {isAuthor && prescription.status === 'draft' && (
             <button
               onClick={handleFinalize}
               className="btn-primary text-xs"
@@ -134,9 +166,9 @@ export default function PrescriptionDetailsPage() {
             </button>
           )}
 
-          {user?.role === 'doctor' && prescription.status !== 'cancelled' && prescription.status !== 'completed' && (
+          {isAuthor && prescription.status !== 'cancelled' && prescription.status !== 'completed' && prescription.pharmacy_status !== 'dispensed' && (
             <button
-              onClick={handleCancel}
+              onClick={() => setCancelOpen(true)}
               className="btn-danger text-xs"
             >
               <XCircle className="w-3.5 h-3.5" /> Cancel Prescription
@@ -310,7 +342,24 @@ export default function PrescriptionDetailsPage() {
         </div>
       </div>
       {/* Pharmacy verification & dispensing */}
-      <PharmacyPanel prescription={prescription} role={user?.role} onUpdated={setPrescription} />
+      {/* Pharmacy panel: pharmacists/admins always; doctors only when the pharmacist flagged a problem */}
+      {(user?.role === 'pharmacist' || user?.role === 'administrator' || (isAuthor && (prescription.pharmacy_status === 'flagged' || prescription.pharmacy_history?.some((h) => h.action === 'flag')))) && (
+        <PharmacyPanel prescription={prescription} role={user?.role} onUpdated={setPrescription} />
+      )}
+      <Modal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel prescription" maxWidth="md">
+        <div className="space-y-3">
+          <p className="text-sm text-text-secondary dark:text-slate-300">
+            The patient is notified and the remaining doses are removed from their schedule. This can't be undone.
+          </p>
+          <label className="label">Reason</label>
+          <textarea rows={3} className="input" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="e.g. Wrong dose entered / patient allergic / pharmacist flagged an interaction" />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setCancelOpen(false)} className="btn-secondary">Keep prescription</button>
+            <button disabled={cancelReason.trim().length < 3} onClick={handleCancel} className="btn-danger">Cancel prescription</button>
+          </div>
+        </div>
+      </Modal>
       {editingDraft && (
         <EditDraftModal prescription={prescription} isOpen={editingDraft} onClose={() => setEditingDraft(false)} onSaved={setPrescription} />
       )}

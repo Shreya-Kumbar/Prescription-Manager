@@ -22,6 +22,9 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import StatCard from '../components/ui/StatCard';
+import AppointmentsCard from '../components/appointments/AppointmentsCard';
+import RegisterPatientModal from '../components/vitals/RegisterPatientModal';
+import { VitalAlerts, VitalTiles } from '../components/vitals/VitalsPanel';
 import {
   ActivityList,
   BarCard,
@@ -43,12 +46,14 @@ const countBy = <T,>(arr: T[], key: (x: T) => string) =>
   arr.reduce<Record<string, number>>((m, x) => ((m[key(x)] = (m[key(x)] ?? 0) + 1), m), {});
 
 /** Loads several endpoints in parallel; a failing optional endpoint never breaks the page. */
-function useDashboardData(role?: string) {
+function useDashboardData(role?: string, userId?: string) {
   const [data, setData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const wanted: Record<string, string> = { dash: '/dashboard', rx: '/prescriptions?per_page=100' };
+    const wanted: Record<string, string> = { dash: '/dashboard' };
+    if (role !== 'receptionist') wanted.rx = '/prescriptions?per_page=100';  // receptionists have no prescription access
+    if (role === 'patient' && userId) wanted.vitals = `/patients/${userId}/vitals?limit=1`;
     if (role === 'doctor' || role === 'administrator') wanted.analytics = '/analytics/overview?days=365';
     if (role === 'patient') wanted.schedule = '/schedule';
     if (role === 'pharmacist') wanted.meds = '/medications?per_page=200';
@@ -77,7 +82,7 @@ function useDashboardData(role?: string) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const role = user?.role;
-  const { data, loading, reload } = useDashboardData(role);
+  const { data, loading, reload } = useDashboardData(role, user?.id);
 
   if (loading) {
     return (
@@ -99,6 +104,7 @@ export default function DashboardPage() {
   if (role === 'patient') return <PatientDashboard {...props} />;
   if (role === 'pharmacist') return <PharmacistDashboard {...props} />;
   if (role === 'administrator') return <AdminDashboard {...props} />;
+  if (role === 'receptionist') return <ReceptionistDashboard {...props} />;
   return null;
 }
 
@@ -146,6 +152,7 @@ function DoctorDashboard({ user, data }: DashProps) {
         ]}
         action={<button onClick={exportCsv} className="btn-secondary text-xs"><Download className="w-3.5 h-3.5" /> Export CSV</button>}
       />
+      <AppointmentsCard role="doctor" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Patients" value={stats.total_patients ?? 0} subtitle="Under your care" icon={Users} color="primary" />
@@ -209,7 +216,9 @@ function PatientDashboard({ user, data, reload }: DashProps) {
   const todays = schedule.filter((s) => new Date(s.scheduled_at).toDateString() === today);
   const taken = todays.filter((s) => s.logged_action === 'taken').length;
   const skipped = todays.filter((s) => s.logged_action === 'skipped').length;
-  const logged = schedule.filter((s) => s.logged_action);
+  // Past doses never logged count as missed (a dose can only be logged on its own day)
+  const startOfToday = new Date(new Date().toDateString());
+  const logged = schedule.filter((s) => s.logged_action || new Date(s.scheduled_at) < startOfToday);
   const adherence = logged.length ? Math.round((logged.filter((s) => s.logged_action === 'taken').length / logged.length) * 100) : null;
 
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -231,6 +240,7 @@ function PatientDashboard({ user, data, reload }: DashProps) {
         ]}
         action={<button onClick={() => navigate('/schedule')} className="btn-primary text-xs"><Calendar className="w-3.5 h-3.5" /> Full schedule</button>}
       />
+      <AppointmentsCard role="patient" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Active prescriptions" value={stats.active_prescriptions ?? 0} subtitle={`${stats.total_prescriptions ?? 0} in total`} icon={FileText} color="primary" />
@@ -238,6 +248,17 @@ function PatientDashboard({ user, data, reload }: DashProps) {
         <StatCard title="Taken today" value={taken} subtitle={todays.length ? `${Math.round((taken / todays.length) * 100)}% done` : 'Nothing scheduled'} icon={CheckCircle2} color="success" />
         <StatCard title="Adherence" value={adherence != null ? `${adherence}%` : '—'} subtitle={`${logged.length} doses logged`} icon={HeartPulse} color="warning" />
       </div>
+
+      {data.vitals?.[0] && (
+        <div className="card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-text dark:text-white">My latest vitals</h3>
+            <span className="text-xs text-text-secondary dark:text-slate-400">{new Date(data.vitals[0].recorded_at).toLocaleString()}</span>
+          </div>
+          <VitalTiles v={data.vitals[0]} />
+          <VitalAlerts vitals={data.vitals[0]} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <DonutCard title="Today's doses" icon={PieIcon} tone="teal" centerLabel="doses today" data={[
@@ -403,6 +424,7 @@ function AdminDashboard({ user, data }: DashProps) {
           { name: 'Patients', value: roles.patient ?? 0, color: '#7DB9DE' },
           { name: 'Pharmacists', value: roles.pharmacist ?? 0, color: '#E6B566' },
           { name: 'Admins', value: roles.administrator ?? 0, color: '#B7A6E0' },
+          { name: 'Receptionists', value: roles.receptionist ?? 0, color: '#F2A98C' },
         ]} />
         <div className="lg:col-span-2">
           <BarCard title="Prescriptions per month" icon={BarChart3} tone="blue" data={lastSixMonths(rx.map((p) => p.issue_date))} xKey="month" yKey="count" />
@@ -424,6 +446,77 @@ function AdminDashboard({ user, data }: DashProps) {
           }))}
         />
         <ProgressList title="Prescriptions by doctor" icon={Stethoscope} tone="blue" note="All time" items={byDoctor} empty="No prescriptions yet" />
+      </div>
+    </div>
+  );
+}
+
+
+/* ===================================================================== */
+/*  RECEPTIONIST                                                         */
+/* ===================================================================== */
+function ReceptionistDashboard({ user, data, reload }: DashProps) {
+  const navigate = useNavigate();
+  const stats = data.dash?.stats ?? {};
+  const recent: any[] = stats.recent_vitals ?? [];
+  const [showRegister, setShowRegister] = useState(false);
+  const flaggedNow = recent.filter((v) => v.alerts?.length);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`Good to see you, ${user?.first_name ?? ''}`}
+        subtitle="Check patients in, record their vitals, and the doctor sees them before prescribing."
+        chips={[
+          { label: `${stats.vitals_today ?? 0} checked in today`, color: '#4FA67A' },
+          ...(stats.flagged_today ? [{ label: `${stats.flagged_today} need attention`, color: '#E08E8E' }] : []),
+        ]}
+        action={
+          <button onClick={() => setShowRegister(true)} className="btn-primary text-xs">
+            <PlusCircle className="w-3.5 h-3.5" /> Register patient
+          </button>
+        }
+      />
+      <AppointmentsCard role="receptionist" />
+      <RegisterPatientModal isOpen={showRegister} onClose={() => setShowRegister(false)} onCreated={(id) => { reload(); navigate(`/patients/${id}`); }} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Patients" value={stats.total_patients ?? 0} subtitle="Registered in the system" icon={Users} color="primary" />
+        <StatCard title="New today" value={stats.registered_today ?? 0} subtitle="Walk-ins registered" icon={PlusCircle} color="secondary" />
+        <StatCard title="Vitals today" value={stats.vitals_today ?? 0} subtitle="Check-ins completed" icon={HeartPulse} color="success" />
+        <StatCard title="Need attention" value={stats.flagged_today ?? 0} subtitle="Abnormal readings today" icon={Activity} color="warning" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActivityList
+          title="Recent check-ins"
+          icon={Clock}
+          tone="blue"
+          onViewAll={() => navigate('/patients')}
+          empty="No vitals recorded yet — open a patient and click Record vitals"
+          items={recent.map((v) => ({
+            key: v.id,
+            title: v.patient_name,
+            sub: `${v.systolic_bp ? `BP ${v.systolic_bp}/${v.diastolic_bp}` : 'BP —'} · SpO₂ ${v.spo2 ?? '—'}% · ${v.temperature_c ?? '—'} °C · ${timeAgo(v.recorded_at)}`,
+            dot: v.alerts?.some((a: any) => a.level === 'critical') ? '#E08E8E' : v.alerts?.length ? '#E6B566' : '#4FA67A',
+            onClick: () => navigate(`/patients/${v.patient_id}`),
+          }))}
+        />
+        <div className="card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-text dark:text-white">Latest abnormal reading</h3>
+          </div>
+          {flaggedNow[0] ? (
+            <>
+              <p className="text-sm font-medium text-text dark:text-slate-100">{flaggedNow[0].patient_name}</p>
+              <VitalTiles v={flaggedNow[0]} />
+              <VitalAlerts vitals={flaggedNow[0]} />
+              <button onClick={() => navigate(`/patients/${flaggedNow[0].patient_id}`)} className="btn-secondary text-xs">Open patient</button>
+            </>
+          ) : (
+            <p className="text-sm text-text-secondary dark:text-slate-400 py-10 text-center">No abnormal readings recently</p>
+          )}
+        </div>
       </div>
     </div>
   );

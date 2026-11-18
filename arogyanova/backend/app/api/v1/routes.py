@@ -14,18 +14,18 @@ from sqlalchemy.orm import selectinload
 
 from app.db.database import get_db
 from app.domain.base_user import UserRole
-from app.domain.ai_providers import LocalInteractionChecker, LocalOCRProvider
+from app.domain.ai_providers import LocalInteractionChecker
 from app.models.models import (
     AuditLogModel, MedicationLogModel, MedicationModel, MedicationScheduleModel,
     NotificationModel, PrescriptionItemModel, PrescriptionModel, UserModel,
-    DoctorProfileModel, PatientProfileModel, PharmacistProfileModel,
+    DoctorProfileModel, PatientProfileModel, PharmacistProfileModel, VitalsModel,
 )
 from app.schemas.schemas import (
-    AdminCreateUser,
+    AdminCreateUser, VitalsCreate, VitalsResponse,
     AdminUserUpdate, AuditLogResponse, DashboardStatsResponse,
     InteractionCheckRequest, InteractionCheckResponse, LogMedicationRequest,
     MedicationCreate, MedicationResponse, MedicationUpdate,
-    MessageResponse, NotificationResponse, OCRResponse,
+    MessageResponse, NotificationResponse,
     PatientProfileResponse, ScheduleEntryResponse, UserDetailResponse, UserResponse,
 )
 from app.security.dependencies import get_current_user
@@ -44,7 +44,7 @@ async def list_patients(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
 ) -> List[UserDetailResponse]:
-    if current_user.role not in [UserRole.DOCTOR.value, UserRole.ADMINISTRATOR.value]:
+    if current_user.role not in [UserRole.DOCTOR.value, UserRole.ADMINISTRATOR.value, UserRole.RECEPTIONIST.value]:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     q = (
@@ -78,7 +78,7 @@ async def get_patient(
     # Patients can only view themselves
     if current_user.role == UserRole.PATIENT.value and current_user.id != patient_id:
         raise HTTPException(status_code=403, detail="Access denied.")
-    if current_user.role not in [UserRole.DOCTOR.value, UserRole.ADMINISTRATOR.value, UserRole.PATIENT.value]:
+    if current_user.role not in [UserRole.DOCTOR.value, UserRole.ADMINISTRATOR.value, UserRole.PATIENT.value, UserRole.RECEPTIONIST.value]:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     result = await db.execute(
@@ -263,14 +263,21 @@ async def log_medication(
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule entry not found.")
 
-    # A dose can only be logged on or after the day it is scheduled for.
+    # A dose can only be logged on the day it is scheduled for:
+    # future doses aren't due yet, and past unlogged doses count as missed.
     scheduled = schedule.scheduled_at
     if scheduled.tzinfo is not None:
         scheduled = scheduled.astimezone().replace(tzinfo=None)
-    if scheduled.date() > datetime.now().date():
+    today = datetime.now().date()
+    if scheduled.date() > today:
         raise HTTPException(
             status_code=400,
             detail=f"This dose is scheduled for {scheduled.strftime('%d %b')}. You can log it on that day.",
+        )
+    if scheduled.date() < today:
+        raise HTTPException(
+            status_code=400,
+            detail=f"This dose was due on {scheduled.strftime('%d %b')} and can no longer be logged — it counts as missed.",
         )
 
     # Each dose is logged once.
@@ -452,7 +459,7 @@ async def get_dashboard(
 
     elif role == UserRole.ADMINISTRATOR.value:
         user_counts = {}
-        for r in ["doctor", "patient", "pharmacist", "administrator"]:
+        for r in ["doctor", "patient", "pharmacist", "administrator", "receptionist"]:
             count = (await db.execute(
                 select(func.count()).where(UserModel.role == r)
             )).scalar_one()
@@ -465,6 +472,33 @@ async def get_dashboard(
             "users_by_role": user_counts,
             "total_prescriptions": total_pres,
             "active_prescriptions": active_pres,
+        }
+
+    elif role == UserRole.RECEPTIONIST.value:
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        total_patients = (await db.execute(select(func.count()).where(UserModel.role == "patient"))).scalar_one()
+        new_today = (await db.execute(select(func.count()).where(
+            UserModel.role == "patient", UserModel.created_at >= today_start))).scalar_one()
+        recent = (await db.execute(
+            select(VitalsModel).options(selectinload(VitalsModel.recorded_by))
+            .order_by(VitalsModel.recorded_at.desc()).limit(8)
+        )).scalars().all()
+        names = {u.id: f"{u.first_name} {u.last_name}" for u in (await db.execute(
+            select(UserModel).where(UserModel.id.in_([v.patient_id for v in recent])))).scalars().all()}
+        vitals_today = (await db.execute(select(func.count()).where(VitalsModel.recorded_at >= today_start))).scalar_one()
+        recent_out = []
+        flagged_today = 0
+        for v in recent:
+            resp = _vitals_response(v)
+            if v.recorded_at and v.recorded_at.replace(tzinfo=None) >= today_start and resp.alerts:
+                flagged_today += 1
+            recent_out.append({**resp.model_dump(mode="json"), "patient_name": names.get(v.patient_id, "Patient")})
+        stats = {
+            "total_patients": total_patients,
+            "registered_today": new_today,
+            "vitals_today": vitals_today,
+            "flagged_today": flagged_today,
+            "recent_vitals": recent_out,
         }
 
     return DashboardStatsResponse(role=role, stats=stats)
@@ -503,27 +537,40 @@ async def analytics_overview(
         day = p.issue_date.isoformat()
         by_date[day] = by_date.get(day, 0) + 1
 
-    # --- Medication adherence from real dose logs (taken vs skipped) ---
-    logs_q = select(MedicationLogModel.action, MedicationLogModel.logged_at)
+    # --- Medication adherence, per scheduled dose ---
+    # taken / skipped come from the patient's logs; a past dose with no log counts as MISSED;
+    # today's unlogged doses are still pending and future doses are not counted yet.
+    sched_q = select(MedicationScheduleModel).options(selectinload(MedicationScheduleModel.logs))
     if current_user.role == UserRole.DOCTOR.value:
         my_patients = select(PrescriptionModel.patient_id).where(PrescriptionModel.doctor_id == current_user.id)
-        logs_q = logs_q.where(MedicationLogModel.patient_id.in_(my_patients))
-    logs = (await db.execute(logs_q)).all()
-    taken_total = sum(1 for a, _ in logs if a == "taken")
-    adherence_rate = round(taken_total / len(logs) * 100, 1) if logs else None
+        sched_q = sched_q.where(MedicationScheduleModel.patient_id.in_(my_patients))
+    schedules = (await db.execute(sched_q)).scalars().all()
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now().date()
+
+    def dose_state(sc) -> str:
+        if sc.logs:
+            return sc.logs[0].action               # "taken" | "skipped"
+        d = sc.scheduled_at.date()
+        return "missed" if d < today else ("pending" if d == today else "upcoming")
+
+    states = [(sc.scheduled_at.date(), dose_state(sc)) for sc in schedules]
+    counted = [st for _, st in states if st in ("taken", "skipped", "missed")]
+    taken_total = sum(1 for st in counted if st == "taken")
+    missed_total = sum(1 for st in counted if st == "missed")
+    adherence_rate = round(taken_total / len(counted) * 100, 1) if counted else None
+
     week = []
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
-        day_logs = [a for a, t in logs if t and t.date() == d]
-        taken = sum(1 for a in day_logs if a == "taken")
+        day = [st for dd, st in states if dd == d and st in ("taken", "skipped", "missed")]
+        taken = sum(1 for st in day if st == "taken")
         week.append({
             "day": d.strftime("%a"),
             "date": d.isoformat(),
             "taken": taken,
-            "total": len(day_logs),
-            "rate": round(taken / len(day_logs) * 100, 1) if day_logs else None,
+            "total": len(day),
+            "rate": round(taken / len(day) * 100, 1) if day else None,
         })
 
     return {
@@ -532,8 +579,9 @@ async def analytics_overview(
         "status_distribution": status_dist,
         "prescriptions_by_date": by_date,
         "adherence_rate": adherence_rate,
-        "doses_logged": len(logs),
+        "doses_logged": len(counted),
         "doses_taken": taken_total,
+        "doses_missed": missed_total,
         "adherence_by_day": week,
     }
 
@@ -575,6 +623,27 @@ async def admin_list_users(
     return [UserDetailResponse.model_validate(u) for u in rows]
 
 
+@admin_router.post("/users/{user_id}/unlock", response_model=MessageResponse)
+async def admin_unlock_user(
+    user_id: uuid.UUID,
+    request: Request,
+    current_user: Annotated[UserModel, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MessageResponse:
+    """Administrator clears a lockout caused by failed logins."""
+    if current_user.role != UserRole.ADMINISTRATOR.value:
+        raise HTTPException(status_code=403, detail="Administrators only.")
+    target = await db.get(UserModel, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    from app.security.lockout import LOCKOUT
+    LOCKOUT.reset(target)
+    db.add(AuditLogModel(actor_id=current_user.id, action="auth.unlock", resource_type="user", resource_id=str(user_id),
+                         ip_address=request.client.host if request.client else None))
+    await db.commit()
+    return MessageResponse(message=f"{target.first_name} {target.last_name} can sign in again.")
+
+
 @admin_router.post("/users", response_model=UserDetailResponse, status_code=201)
 async def admin_create_user(
     body: AdminCreateUser,
@@ -582,8 +651,11 @@ async def admin_create_user(
     current_user: Annotated[UserModel, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> UserDetailResponse:
-    """Administrators create doctor, pharmacist (or patient/admin) accounts."""
-    if current_user.role != UserRole.ADMINISTRATOR.value:
+    """Administrators create any account; receptionists register walk-in patients."""
+    if current_user.role == UserRole.RECEPTIONIST.value:
+        if body.role != UserRole.PATIENT.value:
+            raise HTTPException(status_code=403, detail="Receptionists can register patients only.")
+    elif current_user.role != UserRole.ADMINISTRATOR.value:
         raise HTTPException(status_code=403, detail="Only administrators can create staff accounts.")
     from app.api.v1.auth import _load_user_with_profiles, create_user_account
     user = await create_user_account(db, body, request.client.host if request.client else None, actor_id=current_user.id)
@@ -654,36 +726,7 @@ async def admin_audit_logs(
 # AI
 # ─────────────────────────────────────────────
 ai_router = APIRouter(prefix="/ai", tags=["AI / ML"])
-_ocr_provider = LocalOCRProvider()
 _interaction_checker = LocalInteractionChecker()
-
-
-@ai_router.post("/ocr", response_model=OCRResponse)
-async def ocr_prescription(
-    current_user: Annotated[UserModel, Depends(get_current_user)],
-    file: UploadFile = File(...),
-) -> OCRResponse:
-    if current_user.role not in [UserRole.DOCTOR.value, UserRole.PHARMACIST.value]:
-        raise HTTPException(status_code=403, detail="OCR is available to doctors and pharmacists only.")
-
-    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/tiff"}
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=422, detail="Unsupported file type. Upload JPEG, PNG, WebP or TIFF.")
-
-    from app.core.config import settings as cfg
-    max_bytes = cfg.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    image_bytes = await file.read()
-    if len(image_bytes) > max_bytes:
-        raise HTTPException(status_code=413, detail=f"File too large. Maximum size: {cfg.MAX_UPLOAD_SIZE_MB} MB.")
-
-    result = await _ocr_provider.extract(image_bytes, file.content_type)
-    return OCRResponse(
-        raw_text=result.raw_text,
-        medicines=result.medicines,
-        is_available=result.is_available,
-        provider=result.provider,
-        error_message=result.error_message,
-    )
 
 
 @ai_router.post("/interaction-check", response_model=InteractionCheckResponse)
@@ -715,3 +758,80 @@ async def check_interactions(
         checked_at=result.checked_at,
         error_message=result.error_message,
     )
+
+
+
+# ─────────────────────────────────────────────
+# Vitals (recorded at check-in by the receptionist, or by the doctor)
+# ─────────────────────────────────────────────
+def _vitals_response(model: VitalsModel) -> VitalsResponse:
+    from app.domain.vitals import VitalSigns
+    v = VitalSigns(
+        systolic_bp=model.systolic_bp, diastolic_bp=model.diastolic_bp, pulse=model.pulse, spo2=model.spo2,
+        temperature_c=model.temperature_c, respiratory_rate=model.respiratory_rate,
+        weight_kg=model.weight_kg, height_cm=model.height_cm,
+    )
+    who = model.recorded_by
+    return VitalsResponse(
+        id=model.id, patient_id=model.patient_id,
+        systolic_bp=model.systolic_bp, diastolic_bp=model.diastolic_bp, pulse=model.pulse, spo2=model.spo2,
+        temperature_c=model.temperature_c, respiratory_rate=model.respiratory_rate,
+        weight_kg=model.weight_kg, height_cm=model.height_cm, notes=model.notes,
+        recorded_by_name=f"{who.first_name} {who.last_name}" if who else "Staff",
+        recorded_by_role=who.role if who else "",
+        recorded_at=model.recorded_at,
+        bmi=v.bmi, bmi_category=v.bmi_category,
+        alerts=[{"level": a.level.value, "message": a.message} for a in v.alerts],
+    )
+
+
+@patients_router.post("/{patient_id}/vitals", response_model=VitalsResponse, status_code=201)
+async def record_vitals(
+    patient_id: uuid.UUID,
+    body: VitalsCreate,
+    request: Request,
+    current_user: Annotated[UserModel, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VitalsResponse:
+    """Receptionist (at check-in) or doctor records a patient's vital signs."""
+    if current_user.role not in (UserRole.RECEPTIONIST.value, UserRole.DOCTOR.value):
+        raise HTTPException(status_code=403, detail="Only receptionists and doctors can record vitals.")
+    patient = (await db.execute(select(UserModel).where(UserModel.id == patient_id))).scalar_one_or_none()
+    if not patient or patient.role != UserRole.PATIENT.value:
+        raise HTTPException(status_code=404, detail="Patient not found.")
+
+    from app.domain.vitals import VitalSigns
+    readings = body.model_dump(exclude={"notes"})
+    VitalSigns(**readings)  # domain validation — raises ValueError -> HTTP 400
+
+    model = VitalsModel(patient_id=patient_id, recorded_by_id=current_user.id, notes=body.notes, **readings)
+    db.add(model)
+    db.add(AuditLogModel(
+        actor_id=current_user.id, action="vitals.record", resource_type="patient", resource_id=str(patient_id),
+        ip_address=request.client.host if request.client else None,
+    ))
+    await db.commit()
+    saved = (await db.execute(
+        select(VitalsModel).options(selectinload(VitalsModel.recorded_by)).where(VitalsModel.id == model.id)
+    )).scalar_one()
+    return _vitals_response(saved)
+
+
+@patients_router.get("/{patient_id}/vitals", response_model=List[VitalsResponse])
+async def list_vitals(
+    patient_id: uuid.UUID,
+    current_user: Annotated[UserModel, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: int = Query(20, ge=1, le=100),
+) -> List[VitalsResponse]:
+    """Vital-sign history, newest first."""
+    if current_user.role == UserRole.PATIENT.value and current_user.id != patient_id:
+        raise HTTPException(status_code=403, detail="You can only view your own vitals.")
+    if current_user.role == UserRole.PHARMACIST.value:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    rows = (await db.execute(
+        select(VitalsModel).options(selectinload(VitalsModel.recorded_by))
+        .where(VitalsModel.patient_id == patient_id)
+        .order_by(VitalsModel.recorded_at.desc()).limit(limit)
+    )).scalars().all()
+    return [_vitals_response(r) for r in rows]

@@ -9,7 +9,7 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, Date, DateTime,
+    Boolean, CheckConstraint, Column, Date, DateTime, Float,
     Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid,
 )
 
@@ -39,6 +39,9 @@ class UserModel(Base):
         index=True,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Brute-force protection (see app.security.lockout.AccountLockoutPolicy)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -74,7 +77,7 @@ class UserModel(Base):
     )
 
     __table_args__ = (
-        CheckConstraint("role IN ('doctor', 'patient', 'pharmacist', 'administrator')", name="valid_role"),
+        CheckConstraint("role IN ('doctor', 'patient', 'pharmacist', 'administrator', 'receptionist')", name="valid_role"),
     )
 
     def __repr__(self) -> str:
@@ -162,6 +165,10 @@ class PrescriptionModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # Pharmacy workflow state (see app.domain.pharmacy.PharmacyReview)
     pharmacy_status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending", nullable=False, index=True)
+    # Why it was cancelled (shown to everyone who can see the prescription)
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(Text)
+    # A corrected prescription points at the one it replaces (e.g. after a pharmacy flag)
+    replaces_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid(as_uuid=True), ForeignKey("prescriptions.id"), nullable=True, index=True)
 
     doctor: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[doctor_id], back_populates="prescriptions_written")
     patient: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[patient_id], back_populates="prescriptions_received")
@@ -326,5 +333,57 @@ class PharmacyActionModel(Base):
     pharmacist: Mapped["UserModel"] = relationship("UserModel")
 
     __table_args__ = (
-        CheckConstraint("action IN ('verify', 'flag', 'dispense')", name="valid_pharmacy_action"),
+        CheckConstraint("action IN ('verify', 'flag', 'dispense', 'respond')", name="valid_pharmacy_action"),
+    )
+
+
+class VitalsModel(Base):
+    """Vital signs recorded at check-in (validated by app.domain.vitals.VitalSigns)."""
+    __tablename__ = "vitals"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    recorded_by_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    systolic_bp: Mapped[Optional[int]] = mapped_column(Integer)
+    diastolic_bp: Mapped[Optional[int]] = mapped_column(Integer)
+    pulse: Mapped[Optional[int]] = mapped_column(Integer)
+    spo2: Mapped[Optional[int]] = mapped_column(Integer)
+    temperature_c: Mapped[Optional[float]] = mapped_column(Float)
+    respiratory_rate: Mapped[Optional[int]] = mapped_column(Integer)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float)
+    height_cm: Mapped[Optional[float]] = mapped_column(Float)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    recorded_by: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[recorded_by_id])
+
+    __table_args__ = (
+        CheckConstraint("spo2 IS NULL OR (spo2 BETWEEN 50 AND 100)", name="valid_spo2"),
+    )
+
+
+class AppointmentModel(Base):
+    """A patient's booked visit to a doctor (rules in app.domain.appointment.Appointment)."""
+    __tablename__ = "appointments"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    doctor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    booked_by_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # Clinic wall-clock time (no time zone): the slot the patient was given
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False, index=True)
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="booked", nullable=False, index=True)
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    patient: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[patient_id])
+    doctor: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[doctor_id])
+    booked_by: Mapped["UserModel"] = relationship("UserModel", foreign_keys=[booked_by_id])
+
+    __table_args__ = (
+        CheckConstraint("status IN ('booked', 'checked_in', 'completed', 'cancelled', 'no_show')", name="valid_appointment_status"),
+        Index("ix_appointments_doctor_time", "doctor_id", "scheduled_at"),
     )

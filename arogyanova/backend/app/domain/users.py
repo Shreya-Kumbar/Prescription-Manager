@@ -33,7 +33,6 @@ class Doctor(BaseUser):
         "schedule:read",
         "analytics:read:own",
         "notification:read",
-        "ai:ocr",
         "ai:interaction_check",
     }
 
@@ -205,3 +204,42 @@ class Administrator(BaseUser):
 
     def can_create_prescription(self) -> bool:
         return False
+
+
+
+class Receptionist(BaseUser):
+    """
+    Front-desk staff: registers walk-in patients and records vital signs at check-in,
+    so the doctor sees them before prescribing.
+
+    OOP: Inheritance from BaseUser
+    OOP: Polymorphism via get_permissions() override
+    """
+
+    PERMISSIONS = {
+        "patient:register",
+        "patient:read:basic",
+        "vitals:record",
+        "vitals:read",
+        "notification:read",
+    }
+
+    def __init__(
+        self,
+        user_id: uuid.UUID,
+        email: str,
+        first_name: str,
+        last_name: str,
+        is_active: bool = True,
+        created_at: Optional[datetime] = None,
+    ) -> None:
+        super().__init__(user_id, email, first_name, last_name, UserRole.RECEPTIONIST, is_active, created_at)
+
+    def get_permissions(self) -> set[str]:
+        return self.PERMISSIONS.copy()
+
+    def can_create_prescription(self) -> bool:
+        return False
+
+    def can_record_vitals(self) -> bool:
+        return True

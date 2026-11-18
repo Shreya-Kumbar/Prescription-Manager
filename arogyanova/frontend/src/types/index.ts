@@ -1,6 +1,6 @@
 // ArogyaNova — TypeScript Type Definitions
 
-export type UserRole = 'doctor' | 'patient' | 'pharmacist' | 'administrator';
+export type UserRole = 'doctor' | 'patient' | 'pharmacist' | 'administrator' | 'receptionist';
 
 export interface DoctorProfile {
   license_number: string;
@@ -81,10 +81,13 @@ export interface PrescriptionSummary {
   doctor?: User;
   item_count: number;
   pharmacy_status?: 'pending' | 'verified' | 'flagged' | 'dispensed';
+  cancellation_reason?: string | null;
+  replaces_id?: string | null;   // this is a corrected version of that prescription
+  replaced_by_id?: string | null; // this was replaced by that prescription
 }
 
 export interface PharmacyHistoryEntry {
-  action: 'verify' | 'flag' | 'dispense';
+  action: 'verify' | 'flag' | 'dispense' | 'respond';
   notes?: string;
   pharmacist_name: string;
   created_at: string;
@@ -143,19 +146,6 @@ export interface InteractionCheckResult {
   error_message?: string;
 }
 
-export interface OCRResult {
-  raw_text: string;
-  medicines: Array<{
-    name: string;
-    strength?: string;
-    is_uncertain: boolean;
-    requires_review: boolean;
-  }>;
-  is_available: boolean;
-  provider: string;
-  error_message?: string;
-}
-
 export interface AuditLog {
   id: string;
   actor_id?: string;
@@ -174,4 +164,30 @@ export interface DashboardStats {
 
 export interface ApiError {
   detail: string;
+}
+
+
+export interface VitalAlert {
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+}
+
+export interface Vitals {
+  id: string;
+  patient_id: string;
+  systolic_bp?: number | null;
+  diastolic_bp?: number | null;
+  pulse?: number | null;
+  spo2?: number | null;
+  temperature_c?: number | null;
+  respiratory_rate?: number | null;
+  weight_kg?: number | null;
+  height_cm?: number | null;
+  notes?: string | null;
+  bmi?: number | null;
+  bmi_category?: string | null;
+  alerts: VitalAlert[];
+  recorded_by_name: string;
+  recorded_by_role: string;
+  recorded_at: string;
 }

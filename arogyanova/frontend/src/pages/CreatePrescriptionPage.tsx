@@ -1,5 +1,7 @@
+import { VitalAlerts, VitalTiles } from '../components/vitals/VitalsPanel';
+import type { Vitals } from '../types';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Trash2,
@@ -17,6 +19,7 @@ import api from '../services/api';
 import { prescriptionService } from '../services/prescriptionService';
 import type { Medication, User, InteractionCheckResult } from '../types';
 import Modal from '../components/ui/Modal';
+import { rxNo } from '../utils/rxNumber';
 
 interface PrescItemState {
   medication_id: string;
@@ -32,6 +35,9 @@ interface PrescItemState {
 
 export default function CreatePrescriptionPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromId = searchParams.get('from'); // rewriting a flagged prescription
+  const [flagNote, setFlagNote] = useState('');
 
   // Master Data
   const [patients, setPatients] = useState<User[]>([]);
@@ -79,7 +85,29 @@ export default function CreatePrescriptionPage() {
       ]);
       setPatients(patRes.data || []);
       setMedications(medRes.data || []);
-      if (patRes.data?.length > 0) {
+      if (fromId) {
+        // Start from the flagged prescription so the doctor only fixes what the pharmacist raised
+        const old = await prescriptionService.get(fromId);
+        setFlagNote([...(old.pharmacy_history ?? [])].reverse().find((h) => h.action === 'flag')?.notes ?? '');
+        if (old.patient?.id) setPatientId(old.patient.id);
+        setDiagnosis(old.diagnosis ?? '');
+        setClinicalNotes(old.clinical_notes ?? '');
+        if (old.items?.length) {
+          setItems(old.items.map((it) => ({
+            medication_id: it.medication_id,
+            medication_name: it.medication?.generic_name ?? '',
+            strength: it.strength,
+            dosage: it.dosage,
+            route: it.route,
+            frequency: it.frequency,
+            duration_days: it.duration_days,
+            quantity: it.quantity,
+            instructions: it.instructions ?? '',
+          })));
+        }
+      } else if (searchParams.get('patient')) {
+        setPatientId(searchParams.get('patient') as string);
+      } else if (patRes.data?.length > 0) {
         setPatientId(patRes.data[0].id);
       }
     } catch {
@@ -131,9 +159,11 @@ export default function CreatePrescriptionPage() {
 
   // Run AI Drug Interaction Check
   const runInteractionCheck = async () => {
-    const names = items
-      .map((i) => i.medication_name.trim())
-      .filter((n) => n.length > 0);
+    // Check the new medicines together with what the patient is already taking
+    const names = Array.from(new Set([
+      ...items.map((i) => i.medication_name.trim()),
+      ...currentMeds.map((m) => m.name),
+    ].filter((n) => n.length > 0)));
 
     if (names.length < 2) {
       toast.error('Add at least two medications to check for potential drug-drug interactions.');
@@ -177,6 +207,7 @@ export default function CreatePrescriptionPage() {
         follow_up_date: followUpDate || undefined,
         diagnosis,
         clinical_notes: clinicalNotes,
+        replaces_id: fromId || undefined,
         items: items.map((i) => ({
           medication_id: i.medication_id,
           strength: i.strength,
@@ -207,6 +238,35 @@ export default function CreatePrescriptionPage() {
   };
 
   const selectedPatient = patients.find((p) => p.id === patientId);
+  const [latestVitals, setLatestVitals] = useState<Vitals | null>(null);
+  useEffect(() => {
+    setLatestVitals(null);
+    if (!patientId) return;
+    api.get(`/patients/${patientId}/vitals`, { params: { limit: 1 } })
+      .then((r) => setLatestVitals(r.data[0] ?? null))
+      .catch(() => setLatestVitals(null));
+  }, [patientId]);
+
+  // Medicines the patient is currently on — from ANY doctor — so nothing is prescribed blind
+  const [currentMeds, setCurrentMeds] = useState<{ name: string; detail: string; doctor: string; rxId: string }[]>([]);
+  useEffect(() => {
+    setCurrentMeds([]);
+    if (!patientId) return;
+    (async () => {
+      try {
+        const list = await prescriptionService.list({ patient_id: patientId, status: 'active', per_page: 20 });
+        const details = await Promise.all(list.items.filter((p) => p.id !== fromId).map((p) => prescriptionService.get(p.id)));
+        setCurrentMeds(details.flatMap((d) => d.items.map((it) => ({
+          name: it.medication?.generic_name ?? 'Medicine',
+          detail: `${it.strength} · ${it.dosage} · ${it.frequency}`,
+          doctor: d.doctor ? `Dr. ${d.doctor.first_name} ${d.doctor.last_name}` : '',
+          rxId: d.id,
+        }))));
+      } catch {
+        setCurrentMeds([]);
+      }
+    })();
+  }, [patientId, fromId]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-fade-in pb-12">
@@ -220,7 +280,7 @@ export default function CreatePrescriptionPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-text dark:text-white">New Clinical Prescription</h2>
+            <h2 className="text-xl font-bold text-text dark:text-white">{fromId ? `Corrected version of ${rxNo(fromId)}` : 'New Clinical Prescription'}</h2>
             <p className="text-xs text-text-secondary dark:text-slate-400">
               Author an auditable digital prescription for an authorized patient
             </p>
@@ -252,7 +312,16 @@ export default function CreatePrescriptionPage() {
             <Send className="w-3.5 h-3.5" /> Finalize &amp; Issue
           </button>
         </div>
+
       </div>
+
+      {fromId && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-400/20 dark:bg-amber-400/10 px-4 py-3 text-xs text-amber-900 dark:text-amber-100">
+          <p className="font-semibold">Correcting a flagged prescription ({rxNo(fromId)})</p>
+          {flagNote && <p className="mt-0.5">Pharmacist's concern: “{flagNote}”</p>}
+          <p className="mt-0.5 opacity-80">Fix the problem below. When you click <b>Finalize &amp; Issue</b>, {rxNo(fromId)} is cancelled automatically, the patient is told to follow this one, and the pharmacist gets it in their queue.</p>
+        </div>
+      )}
 
       {/* 1. Patient Selection */}
       <div className="card p-6 space-y-4">
@@ -291,8 +360,37 @@ export default function CreatePrescriptionPage() {
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#121B17] border border-border dark:border-[#24352C] text-xs flex flex-wrap gap-4 text-text-secondary dark:text-slate-300">
             <span><strong className="text-text dark:text-white">Name:</strong> {selectedPatient.first_name} {selectedPatient.last_name}</span>
             <span><strong className="text-text dark:text-white">DOB:</strong> {selectedPatient.patient_profile?.date_of_birth || 'Not recorded'}</span>
-            <span><strong className="text-text dark:text-white">Blood Group:</strong> {selectedPatient.patient_profile?.blood_group || 'O+'}</span>
+            <span><strong className="text-text dark:text-white">Blood Group:</strong> {selectedPatient.patient_profile?.blood_group || 'Not recorded'}</span>
             <span><strong className="text-text dark:text-white">Known Allergies:</strong> <span className="text-rose-600 dark:text-rose-400 font-medium">{selectedPatient.patient_profile?.allergies || 'None recorded'}</span></span>
+          </div>
+        )}
+        {selectedPatient && latestVitals && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-text-secondary dark:text-slate-400">
+              Latest vitals · {new Date(latestVitals.recorded_at).toLocaleString()} · by {latestVitals.recorded_by_name}
+            </p>
+            <VitalTiles v={latestVitals} />
+            <VitalAlerts vitals={latestVitals} />
+          </div>
+        )}
+        {selectedPatient && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-text-secondary dark:text-slate-400">
+              Currently taking (active prescriptions from all doctors)
+            </p>
+            {currentMeds.length === 0 ? (
+              <p className="text-xs text-text-secondary dark:text-slate-400">No active medicines.</p>
+            ) : (
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {currentMeds.map((m, i) => (
+                  <li key={i} className="rounded-lg border border-border dark:border-[#24352C] px-3 py-2 text-xs">
+                    <span className="font-semibold text-text dark:text-white">{m.name}</span>
+                    <span className="text-text-secondary dark:text-slate-400"> · {m.detail}</span>
+                    <span className="block text-[11px] text-text-secondary dark:text-slate-500">{m.doctor}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>

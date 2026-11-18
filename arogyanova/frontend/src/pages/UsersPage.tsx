@@ -90,6 +90,7 @@ export default function UsersPage() {
             <option value="doctor">Doctors</option>
             <option value="patient">Patients</option>
             <option value="pharmacist">Pharmacists</option>
+            <option value="receptionist">Receptionists</option>
             <option value="administrator">Administrators</option>
           </select>
         </div>
